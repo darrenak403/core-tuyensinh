@@ -13,14 +13,12 @@ export class DashboardService {
       campusesResult,
       studentsResult,
       tuitionResult,
-      docsResult,
     ] = await Promise.all([
       db`SELECT COUNT(*) as count FROM departments WHERE is_active = true`,
       db`SELECT COUNT(*) as count FROM programs WHERE is_active = true`,
       db`SELECT COUNT(*) as count FROM campuses WHERE is_active = true`,
       db`SELECT COUNT(*) as count FROM applications WHERE status != 'cancelled'`,
       db`SELECT COUNT(DISTINCT program_id) as count FROM progressive_tuition WHERE is_active = true`,
-      db`SELECT COUNT(*) as count FROM chatbot_analytics WHERE created_at >= NOW() - INTERVAL '30 days'`,
     ]);
 
     return {
@@ -29,7 +27,6 @@ export class DashboardService {
       totalCampuses: Number(campusesResult[0]?.count || 0),
       totalStudents: Number(studentsResult[0]?.count || 0),
       totalTuitionPrograms: Number(tuitionResult[0]?.count || 0),
-      totalKnowledgeDocs: Number(docsResult[0]?.count || 0),
     };
   }
 
@@ -234,14 +231,6 @@ export class DashboardService {
         icon: "dollar-sign",
         route: "/tuition",
         color: "green",
-      },
-      {
-        id: "upload-document",
-        title: "Tải Lên Tài Liệu",
-        description: "Thêm tài liệu kiến thức",
-        icon: "book-open",
-        route: "/docs",
-        color: "purple",
       },
       {
         id: "view-report",

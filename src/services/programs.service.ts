@@ -126,9 +126,9 @@ export class ProgramsService extends BaseService<
       SELECT * FROM create_program_with_validation(
         ${data.code},
         ${data.name},
-        ${data.name_en},
         ${data.department_id},
-        ${data.duration_years}
+        ${data.duration_years},
+        ${data.name_en}
       )
     `;
 

@@ -120,9 +120,9 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION create_program_with_validation(
     p_code VARCHAR(20),
     p_name VARCHAR(255),
-    p_name_en VARCHAR(255) DEFAULT NULL,
     p_department_id UUID,
-    p_duration_years INTEGER
+    p_duration_years INTEGER,
+    p_name_en VARCHAR(255) DEFAULT NULL
 ) RETURNS TABLE (
     id UUID,
     code VARCHAR(20),

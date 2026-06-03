@@ -22,6 +22,8 @@ flowchart LR
 
 **Không** commit `docker/.env` production lên repo. Biến nhạy cảm chỉ khai báo trên **Dokploy → Environment**.
 
+**Không** build/push image trên máy dev — workflow `.github/workflows/deploy.yml` làm khi push `main` / tag `v*`.
+
 ---
 
 ## 1. GitHub Actions
@@ -79,8 +81,8 @@ Tạo **PostgreSQL** trên Dokploy (hoặc DB có sẵn):
 ```bash
 # DATABASE_URL trỏ tới DB Dokploy (host = tên service nội bộ Dokploy)
 export DATABASE_URL=postgresql://USER:PASS@postgres-host:1111/fpt_admission_prod
-./scripts/db-init.sh
-./scripts/db-seed.sh
+export JWT_SECRET=...   # bắt buộc cho migrate (đọc docker/.env hoặc env Dokploy)
+bun run src/database/migrate.ts
 ```
 
 Host `postgres-host` lấy từ Dokploy (tên service DB trong cùng project/network).

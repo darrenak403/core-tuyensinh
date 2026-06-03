@@ -8,6 +8,7 @@
 #   POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD
 #
 # Tùy chọn: APP_TAG (default latest), PORT (default 2222), LOG_LEVEL, POSTGRES_PORT (default 1111)
+#   ADMINER_PORT (default 4444)
 
 name: fpt-admission-prod
 
@@ -65,6 +66,20 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    networks:
+      - backend
+
+  adminer:
+    image: adminer:4
+    container_name: fpt-admission-adminer-prod
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres:${POSTGRES_PORT:-1111}
+    ports:
+      - "${ADMINER_PORT:-4444}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - backend
 

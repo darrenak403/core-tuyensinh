@@ -27,11 +27,13 @@ Backend API tuyển sinh FPT — **Bun** + **Hono** + **PostgreSQL** + TypeScrip
 
 | Môi trường | API | DB | Cách chạy |
 |------------|-----|-----|-----------|
-| **Dev** | Host `:2222` | Docker `:1111` | `task up` + `task dev` |
+| **Dev** | Host `:2222` | Docker `:1111` | `task up` + `task dev` (không build image) |
 | **CI** | Test in-memory | GitHub Actions Postgres `:1111` | `deploy.yml` |
 | **Prod** | Container `:2222` | Cùng stack Postgres | GitHub → Docker Hub → **Dokploy** |
 
 ### Deploy production
+
+Build/push image **chỉ trên CI** — local không cần `docker build` / `docker push`.
 
 ```text
 git push main → GitHub Actions (test + docker push)
@@ -72,7 +74,7 @@ task dev
 task up && task dev
 
 # Khác
-task down | task test | task fix | task db:reset
+task down | task clear | task test | task fix | task db:reset
 ```
 
 **VPS / production:** không dùng Task — Dokploy pull image + `docker-compose.prod.yml` + env trên UI.
@@ -91,7 +93,7 @@ docker/
   docker-compose.dev.yml    # Postgres dev
   docker-compose.prod.yml   # API + Postgres (Dokploy)
   .env.example              # mẫu env (copy → .env)
-scripts/                    # db-init, db-seed, db-reset
+src/database/migrate.ts     # migration + seed (task db)
 .github/workflows/deploy.yml # CI + push Docker Hub
 Taskfile.yml                # lệnh dev (local only)
 ```

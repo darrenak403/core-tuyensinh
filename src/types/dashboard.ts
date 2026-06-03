@@ -6,7 +6,6 @@ export const DashboardStatsSchema = z.object({
   totalCampuses: z.number(),
   totalStudents: z.number(),
   totalTuitionPrograms: z.number(),
-  totalKnowledgeDocs: z.number(),
 });
 
 export const RecentActivitySchema = z.object({

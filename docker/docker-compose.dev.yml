@@ -1,5 +1,4 @@
-# Dev: chỉ PostgreSQL. API chạy trên host: task dev
-# Full stack Docker: docker compose -f docker/docker-compose.dev.yml --profile app up -d
+# Dev: PostgreSQL + Adminer. API trên host: task dev (không build/push image — CI làm)
 
 name: fpt-admission-dev
 
@@ -17,7 +16,6 @@ services:
       - "${POSTGRES_PORT:-1111}:${POSTGRES_PORT:-1111}"
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
-      - ../src/database:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test:
         [
@@ -31,20 +29,15 @@ services:
     networks:
       - dev
 
-  app:
-    profiles: ["app"]
-    image: ${DOCKER_USERNAME}/fpt-admission-api:${APP_TAG:-latest}
-    pull_policy: always
-    container_name: fpt-admission-api-dev
+  adminer:
+    image: adminer:4
+    container_name: fpt-admission-adminer-dev
     restart: unless-stopped
     environment:
-      NODE_ENV: development
-      PORT: ${PORT:-2222}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:${POSTGRES_PORT:-1111}/${POSTGRES_DB:-fpt_admission_dev}
-      JWT_SECRET: ${JWT_SECRET}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:2222}
+      # Host:port — Postgres dev dùng PGPORT 1111, không phải 5432
+      ADMINER_DEFAULT_SERVER: postgres:1111
     ports:
-      - "${PORT:-2222}:${PORT:-2222}"
+      - "${ADMINER_PORT:-4444}:8080"
     depends_on:
       postgres:
         condition: service_healthy

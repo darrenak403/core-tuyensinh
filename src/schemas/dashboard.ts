@@ -10,7 +10,6 @@ export const dashboardStatsResponseSchema = z.object({
     totalCampuses: z.number(),
     totalStudents: z.number(),
     totalTuitionPrograms: z.number(),
-    totalKnowledgeDocs: z.number(),
   }),
 });
 

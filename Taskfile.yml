@@ -1,4 +1,4 @@
-# Dev local only — VPS dùng Dokploy + Docker image
+# Dev local only — API: task dev. Image Docker: GitHub Actions → Dokploy
 version: "3"
 
 vars:
@@ -12,24 +12,34 @@ tasks:
       - task --list
 
   setup:
-    desc: Lan dau - bun install, docker/.env, Postgres
+    desc: Lan dau - bun install, docker/.env, Postgres, migration + seed
+    dotenv:
+      - "{{.ENV}}"
     cmds:
       - bun install
       - test -f {{.ENV}} || cp docker/.env.example {{.ENV}}
       - docker compose -f {{.COMPOSE}} --env-file {{.ENV}} up -d --wait
-      - echo "Xong. Chay task db (neu can data) roi task dev"
+      - bun run src/database/migrate.ts
+      - echo "Xong. Chay task dev"
 
   up:
-    desc: Bat Postgres port 1111
+    desc: Bat Postgres :1111 + Adminer :4444
     aliases: [services:up, services-up]
     cmds:
       - docker compose -f {{.COMPOSE}} --env-file {{.ENV}} up -d --wait
 
   down:
-    desc: Tat Postgres
+    desc: Tat Postgres va Adminer
     aliases: [services:down, services-down]
     cmds:
-      - docker compose -f {{.COMPOSE}} down
+      - docker compose -f {{.COMPOSE}} --env-file {{.ENV}} down
+
+  clear:
+    desc: Xoa het container + volume Postgres/Adminer (mat toan bo data DB)
+    aliases: [clean]
+    cmds:
+      - docker compose -f {{.COMPOSE}} --env-file {{.ENV}} down -v --remove-orphans
+      - echo "Da xoa stack dev. Chay task setup && task db de tao lai."
 
   dev:
     desc: Chay API hot-reload port 2222
@@ -53,18 +63,17 @@ tasks:
       - bunx tsc --noEmit
 
   db:
-    desc: Schema va seed
-    aliases: [db:setup, db-setup]
+    desc: Migration schema + seed (bo qua seed neu da co data)
+    aliases: [db:setup, db-setup, db:migrate]
     dotenv:
       - "{{.ENV}}"
     cmds:
-      - ./scripts/db-init.sh
-      - ./scripts/db-seed.sh
+      - bun run src/database/migrate.ts
 
   db:reset:
-    desc: Xoa DB schema seed lai
+    desc: Xoa schema, migration + seed lai
     aliases: [db:rebuild, db-rebuild]
     dotenv:
       - "{{.ENV}}"
     cmds:
-      - ./scripts/db-rebuild.sh
+      - bun run src/database/migrate.ts --reset --yes
