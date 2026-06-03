@@ -1,9 +1,8 @@
 # AGENTS.md
 
 ## Dev commands (Task — local only)
-- `task setup` / `task dev` / `task test` / `task fix`
-- `task services:up` — Postgres dev :1111
-- `task db:setup` — schema + seed
+- `task setup` → lần đầu | `task up` + `task dev` → hằng ngày
+- `task db` / `task test` / `task fix` / `task down`
 - Env: `docker/.env`
 
 ## Production (VPS)

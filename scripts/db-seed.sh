@@ -2,7 +2,7 @@
 
 # Database Seeding
 # Loads seed data files in correct order
-# Note: DATABASE_URL is loaded from docker/.env via Task (task db:seed)
+# Note: DATABASE_URL from docker/.env (task db)
 
 set -e  # Exit on any error
 

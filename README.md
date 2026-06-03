@@ -27,7 +27,7 @@ Backend API tuyển sinh FPT — **Bun** + **Hono** + **PostgreSQL** + TypeScrip
 
 | Môi trường | API | DB | Cách chạy |
 |------------|-----|-----|-----------|
-| **Dev** | Host `:2222` | Docker `:1111` | `task services:up` + `task dev` |
+| **Dev** | Host `:2222` | Docker `:1111` | `task up` + `task dev` |
 | **CI** | Test in-memory | GitHub Actions Postgres `:1111` | `deploy.yml` |
 | **Prod** | Container `:2222` | Cùng stack Postgres | GitHub → Docker Hub → **Dokploy** |
 
@@ -63,12 +63,16 @@ task dev            # API http://localhost:2222
 ## Lệnh dev (Task — chỉ máy local)
 
 ```bash
-task --list
-task setup            # lần đầu
-task services:up      # Postgres :1111
-task dev              # API :2222
-task test
-task db:setup         # schema + seed
+# Lần đầu
+task setup
+task db               # schema + seed (nếu cần)
+task dev
+
+# Hằng ngày
+task up && task dev
+
+# Khác
+task down | task test | task fix | task db:reset
 ```
 
 **VPS / production:** không dùng Task — Dokploy pull image + `docker-compose.prod.yml` + env trên UI.

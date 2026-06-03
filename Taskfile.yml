@@ -1,143 +1,70 @@
-# Dev only — production chạy trên VPS qua Dokploy + Docker image (không dùng Task)
+# Dev local only — VPS dùng Dokploy + Docker image
 version: "3"
 
 vars:
-  DOCKER_COMPOSE_DEV: docker/docker-compose.dev.yml
-  DOCKER_ENV_FILE: docker/.env
-  DOCKER_ENV_EXAMPLE: docker/.env.example
+  COMPOSE: docker/docker-compose.dev.yml
+  ENV: docker/.env
 
 tasks:
   default:
-    desc: List dev tasks
+    desc: Danh sach lenh
     cmds:
       - task --list
 
-  install:
-    desc: Install dependencies
-    sources:
-      - package.json
-      - bun.lock
-    status:
-      - test -d node_modules
+  setup:
+    desc: Lan dau - bun install, docker/.env, Postgres
     cmds:
       - bun install
+      - test -f {{.ENV}} || cp docker/.env.example {{.ENV}}
+      - docker compose -f {{.COMPOSE}} --env-file {{.ENV}} up -d --wait
+      - echo "Xong. Chay task db (neu can data) roi task dev"
+
+  up:
+    desc: Bat Postgres port 1111
+    aliases: [services:up, services-up]
+    cmds:
+      - docker compose -f {{.COMPOSE}} --env-file {{.ENV}} up -d --wait
+
+  down:
+    desc: Tat Postgres
+    aliases: [services:down, services-down]
+    cmds:
+      - docker compose -f {{.COMPOSE}} down
 
   dev:
-    desc: Start API with hot reload (port 2222)
-    deps: [install]
+    desc: Chay API hot-reload port 2222
+    dotenv:
+      - "{{.ENV}}"
     preconditions:
-      - sh: test -f {{.DOCKER_ENV_FILE}}
-        msg: "{{.DOCKER_ENV_FILE}} not found. Run: task setup"
-    dotenv: ["{{.DOCKER_ENV_FILE}}"]
+      - sh: test -f {{.ENV}}
+        msg: "Chay task setup truoc"
     cmds:
       - bun run --watch src/index.ts
 
+  test:
+    desc: Chay tests
+    cmds:
+      - bun test
+
   fix:
-    desc: Lint, format, and typecheck
-    deps: [install]
+    desc: Lint format typecheck
     cmds:
       - bunx biome check --write .
       - bunx tsc --noEmit
 
-  test:
-    desc: Run tests
-    deps: [install]
-    cmds:
-      - bun test
-
-  services:up:
-    desc: Start dev PostgreSQL (port 1111)
-    aliases: [services-up, docker:dev:up]
-    cmds:
-      - docker compose -f {{.DOCKER_COMPOSE_DEV}} --env-file {{.DOCKER_ENV_FILE}} up -d
-      - |
-        echo "⏳ Waiting for PostgreSQL..."
-        for i in $(seq 1 30); do
-          if docker compose -f {{.DOCKER_COMPOSE_DEV}} ps | grep -q "healthy"; then
-            echo "✅ PostgreSQL ready"
-            exit 0
-          fi
-          sleep 2
-        done
-        echo "⚠️  Timeout waiting for healthy postgres"
-        exit 1
-
-  services:down:
-    desc: Stop dev PostgreSQL
-    aliases: [services-down, docker:dev:down]
-    cmds:
-      - docker compose -f {{.DOCKER_COMPOSE_DEV}} down
-
-  services:status:
-    desc: Show dev PostgreSQL status
-    aliases: [services-status]
-    cmds:
-      - docker compose -f {{.DOCKER_COMPOSE_DEV}} ps
-
-  setup:
-    desc: First-time dev setup (deps + docker/.env + postgres)
-    deps: [install]
-    cmds:
-      - |
-        if [ ! -f {{.DOCKER_ENV_FILE}} ]; then
-          cp {{.DOCKER_ENV_EXAMPLE}} {{.DOCKER_ENV_FILE}}
-          echo "📄 Created {{.DOCKER_ENV_FILE}}"
-        fi
-      - |
-        if command -v direnv >/dev/null 2>&1 && [ -f .envrc ]; then
-          direnv allow .
-        fi
-      - task: services:up
-      - echo "✅ Run: task dev"
-
-  direnv:setup:
-    desc: Allow direnv for this project
-    aliases: [direnv-setup]
-    cmds:
-      - direnv allow .
-
-  db:init:
-    desc: Apply database schema
-    aliases: [db-init]
-    preconditions:
-      - sh: test -f {{.DOCKER_ENV_FILE}}
-        msg: "Run: task setup"
-    dotenv: ["{{.DOCKER_ENV_FILE}}"]
+  db:
+    desc: Schema va seed
+    aliases: [db:setup, db-setup]
+    dotenv:
+      - "{{.ENV}}"
     cmds:
       - ./scripts/db-init.sh
-
-  db:seed:
-    desc: Seed database
-    aliases: [db-seed]
-    preconditions:
-      - sh: test -f {{.DOCKER_ENV_FILE}}
-        msg: "Run: task setup"
-    dotenv: ["{{.DOCKER_ENV_FILE}}"]
-    cmds:
       - ./scripts/db-seed.sh
 
-  db:setup:
-    desc: Schema + seed
-    aliases: [db-setup]
-    deps: [db:init, db:seed]
-
   db:reset:
-    desc: Drop all tables
-    aliases: [db-reset]
-    preconditions:
-      - sh: test -f {{.DOCKER_ENV_FILE}}
-        msg: "Run: task setup"
-    dotenv: ["{{.DOCKER_ENV_FILE}}"]
+    desc: Xoa DB schema seed lai
+    aliases: [db:rebuild, db-rebuild]
+    dotenv:
+      - "{{.ENV}}"
     cmds:
-      - ./scripts/db-reset.sh
-
-  db:rebuild:
-    desc: Reset + schema + seed
-    aliases: [db-rebuild]
-    preconditions:
-      - sh: test -f {{.DOCKER_ENV_FILE}}
-        msg: "Run: task setup"
-    dotenv: ["{{.DOCKER_ENV_FILE}}"]
-    cmds:
-      - chmod +x ./scripts/db-rebuild.sh
       - ./scripts/db-rebuild.sh

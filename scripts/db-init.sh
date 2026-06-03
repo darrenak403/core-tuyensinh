@@ -2,7 +2,7 @@
 
 # Database Schema Initialization
 # Loads schema files in correct order
-# Note: DATABASE_URL is loaded from docker/.env via Task (task db:init)
+# Note: DATABASE_URL from docker/.env (task db)
 
 set -e  # Exit on any error
 

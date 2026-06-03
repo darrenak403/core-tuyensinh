@@ -6,7 +6,7 @@
 
 ```bash
 cp docker/.env.example docker/.env
-task services:up    # Postgres :1111
+task up             # Postgres :1111
 task dev            # API :2222 trên host
 ```
 

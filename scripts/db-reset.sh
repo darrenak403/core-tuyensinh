@@ -18,4 +18,4 @@ GRANT ALL ON SCHEMA public TO public;
 "
 
 echo "✅ Database reset complete!"
-echo "💡 Run 'task db:setup' to reload schema and data"
+echo "💡 Run 'task db' to reload schema and data"
