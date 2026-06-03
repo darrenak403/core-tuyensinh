@@ -4,7 +4,7 @@
  */
 
 import { env } from "@config/env";
-import { API_INFO, OPENAPI_CONFIG } from "@constants/app";
+import { API_INFO, BRAND_ASSETS, OPENAPI_CONFIG } from "@constants/app";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 
 /**
@@ -42,6 +42,10 @@ export function setupOpenAPIDoc(app: OpenAPIHono) {
         license: {
           name: "MIT",
           url: "https://opensource.org/licenses/MIT",
+        },
+        "x-logo": {
+          url: BRAND_ASSETS.LOGO,
+          altText: "FPT University",
         },
       },
       servers: getServerConfig(),

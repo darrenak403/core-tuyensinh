@@ -3,9 +3,14 @@
  */
 
 export const API_INFO = {
-  NAME: "AI Chatbot Backend API",
+  NAME: "FPT Admission API",
   VERSION: "1.0.0",
-  DESCRIPTION: "Backend API service for AI Chatbot application",
+  DESCRIPTION: "Backend API tuyển sinh FPT University",
+} as const;
+
+export const BRAND_ASSETS = {
+  LOGO: "/assets/logo.webp",
+  FAVICON: "/favicon.ico",
 } as const;
 
 export const ERROR_CODES = {
