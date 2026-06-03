@@ -1,0 +1,76 @@
+# Production: API + Postgres
+#
+# GitHub Actions push:  ${DOCKER_USERNAME}/fpt-admission-api:latest
+# Dokploy: compose file này + env trên UI (không cần docker/.env trên VPS)
+#
+# Biến bắt buộc (Dokploy / docker/.env local):
+#   DOCKER_USERNAME, JWT_SECRET, CORS_ORIGINS
+#   POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD
+#
+# Tùy chọn: APP_TAG (default latest), PORT (default 2222), LOG_LEVEL, POSTGRES_PORT (default 1111)
+
+name: fpt-admission-prod
+
+services:
+  app:
+    image: ${DOCKER_USERNAME}/fpt-admission-api:${APP_TAG:-latest}
+    pull_policy: always
+    container_name: fpt-admission-api-prod
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: ${PORT:-2222}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT:-1111}/${POSTGRES_DB}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+    ports:
+      - "${PORT:-2222}:${PORT:-2222}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -f http://localhost:$${PORT:-2222}/health || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - backend
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: fpt-admission-postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      PGPORT: ${POSTGRES_PORT:-1111}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+      - ../src/database:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -p ${POSTGRES_PORT:-1111} -U ${POSTGRES_USER} -d ${POSTGRES_DB}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  postgres_data_prod:

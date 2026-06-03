@@ -1,0 +1,21 @@
+#!/usr/bin/env sh
+
+# Commit message validation with emoji enforcement
+commit_regex='^(✨|🐛|📝|🎨|⚡|🔧|🚀|🔒|♻️|🗑️|🚚|📦|🏗️|🧪|💚|📱|🌐|🔀|⏪|🔖|🚨|🚧|💡|🍱|♿|💬|🗃️|🔊|🔇|👥|🚸|📸|⚗️|🔍|🏷️|🌱|🚩|🥅|💫|🗂️|📄) (feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?: .{1,50}'
+
+if ! grep -qE "$commit_regex" "$1"; then
+    echo ""
+    echo "🚨 Invalid commit message format!"
+    echo ""
+    echo "📋 Required format: <emoji> <type>: <subject>"
+    echo ""
+    echo "✅ Valid examples:"
+    echo "  ✨ feat: add user authentication"
+    echo "  🐛 fix: resolve database timeout"
+    echo "  📝 docs: update API documentation"
+    echo "  🎨 style: format code with biome"
+    echo ""
+    echo "📖 See .gitmessage for full emoji list"
+    echo ""
+    exit 1
+fi

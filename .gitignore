@@ -1,0 +1,88 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+out/
+build/
+*.tgz
+
+# Bun
+.bun/
+bun.lockb
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+docker/.env
+docker/.env.*
+!docker/.env.example
+*.pem
+*.key
+credentials.json
+secrets/
+
+# direnv
+.direnv/
+
+# Logs & runtime
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Test & coverage
+coverage/
+*.lcov
+.nyc_output/
+
+# Caches
+.cache/
+node_modules/.cache/
+.eslintcache
+*.tsbuildinfo
+.biome/
+
+# Database (local files only)
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+
+# Docker (local overrides — không commit)
+docker-compose.override.yml
+docker/docker-compose.override.yml
+
+# OS
+.DS_Store
+**/.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Editors & IDEs
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+.fleet/
+.cursor/
+
+# Temporary & scratch
+tmp/
+temp/
+*.orig
+*.bak
+test-*.ts
+demo-*.ts
+
+# Local migration / SQL experiments
+**/migrations/*test*.sql
+**/migrations/*demo*.sql

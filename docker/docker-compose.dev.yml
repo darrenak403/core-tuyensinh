@@ -1,0 +1,59 @@
+# Dev: chỉ PostgreSQL. API chạy trên host: task dev
+# Full stack Docker: docker compose -f docker/docker-compose.dev.yml --profile app up -d
+
+name: fpt-admission-dev
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: fpt-admission-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-fpt_admission_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      PGPORT: ${POSTGRES_PORT:-1111}
+    ports:
+      - "${POSTGRES_PORT:-1111}:${POSTGRES_PORT:-1111}"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+      - ../src/database:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -p ${POSTGRES_PORT:-1111} -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-fpt_admission_dev}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - dev
+
+  app:
+    profiles: ["app"]
+    image: ${DOCKER_USERNAME}/fpt-admission-api:${APP_TAG:-latest}
+    pull_policy: always
+    container_name: fpt-admission-api-dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: ${PORT:-2222}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:${POSTGRES_PORT:-1111}/${POSTGRES_DB:-fpt_admission_dev}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:2222}
+    ports:
+      - "${PORT:-2222}:${PORT:-2222}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - dev
+
+networks:
+  dev:
+    driver: bridge
+
+volumes:
+  postgres_data_dev:
