@@ -8,14 +8,11 @@
     "start": "bun run dist/index.js",
     "build": "bun build src/index.ts --outdir ./dist --target bun",
     "test": "bun test",
-    "dev": "bun run --watch src/index.ts",
-    "prepare": "husky || true"
+    "dev": "bun run --watch src/index.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
-    "@types/bun": "latest",
-    "husky": "^9.1.7",
-    "lint-staged": "^16.0.0"
+    "@types/bun": "latest"
   },
   "peerDependencies": {
     "typescript": "^5"
@@ -27,8 +24,5 @@
     "pino": "^9.7.0",
     "pino-pretty": "^13.0.0",
     "zod": "^3.25.28"
-  },
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx,json}": ["biome check --write --no-errors-on-unmatched"]
   }
 }
