@@ -16,7 +16,10 @@ RUN bun build src/index.ts --outdir ./dist --target bun
 ENV PORT=2222
 EXPOSE 2222
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD curl -f http://localhost:2222/health || exit 1
 
-CMD ["bun", "run", "dist/index.js"]
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

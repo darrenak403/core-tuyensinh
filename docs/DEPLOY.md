@@ -13,12 +13,12 @@ flowchart LR
   dok --> db[(PostgreSQL Dokploy)]
 ```
 
-| Bước | Nơi chạy | Việc cần làm |
-|------|-----------|--------------|
-| 1 | GitHub | CI test + build + `docker push` |
-| 2 | Docker Hub | Lưu image `/<user>/fpt-admission-api` |
-| 3 | Dokploy | Pull image, inject **env**, expose domain |
-| 4 | VPS | Chạy container API + DB (tách service) |
+| Bước | Nơi chạy   | Việc cần làm                              |
+| ---- | ---------- | ----------------------------------------- |
+| 1    | GitHub     | CI test + build + `docker push`           |
+| 2    | Docker Hub | Lưu image `/<user>/fpt-admission-api`     |
+| 3    | Dokploy    | Pull image, inject **env**, expose domain |
+| 4    | VPS        | Chạy container API + DB (tách service)    |
 
 **Không** commit `docker/.env` production lên repo. Biến nhạy cảm chỉ khai báo trên **Dokploy → Environment**.
 
@@ -36,9 +36,9 @@ Workflow: [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml)
 
 ### Secrets (Settings → Secrets and variables → Actions)
 
-| Secret | Mô tả |
-|--------|--------|
-| `DOCKER_USERNAME` | Username Docker Hub |
+| Secret            | Mô tả                                                                          |
+| ----------------- | ------------------------------------------------------------------------------ |
+| `DOCKER_USERNAME` | Username Docker Hub                                                            |
 | `DOCKER_PASSWORD` | Access token ([Docker Hub Security](https://hub.docker.com/settings/security)) |
 
 Image push: `DOCKER_USERNAME/fpt-admission-api`
@@ -70,31 +70,29 @@ Dokploy có thể pin `fpt-admission-api:1.0.0` thay vì `latest`.
 
 Tạo **PostgreSQL** trên Dokploy (hoặc DB có sẵn):
 
-| Thiết lập | Gợi ý |
-|-----------|--------|
-| Port nội bộ | `1111` (khớp convention repo) hoặc `5432` |
-| Database | `fpt_admission_prod` |
-| User / password | Mạnh, lưu trên Dokploy |
+| Thiết lập       | Gợi ý                                     |
+| --------------- | ----------------------------------------- |
+| Port nội bộ     | `1111` (khớp convention repo) hoặc `5432` |
+| Database        | `fpt_admission_prod`                      |
+| User / password | Mạnh, lưu trên Dokploy                    |
 
-**Lần đầu** chạy schema/seed (từ máy có `psql` hoặc terminal Dokploy):
+**Migration + seed:** tự chạy khi container API start (`docker/entrypoint.sh`). VPS **không cần** source — chỉ pull image.
 
-```bash
-# DATABASE_URL trỏ tới DB Dokploy (host = tên service nội bộ Dokploy)
-export DATABASE_URL=postgresql://USER:PASS@postgres-host:1111/fpt_admission_prod
-export JWT_SECRET=...   # bắt buộc cho migrate (đọc docker/.env hoặc env Dokploy)
-bun run src/database/migrate.ts
-```
+- `depends_on: postgres (healthy)` → retry migrate → start API
+- Idempotent; seed chỉ khi DB trống (`departments` = 0)
+- Không tạo user admin — sau deploy gọi `POST /api/v1/auth/register`
+- Tắt: `SKIP_MIGRATE=1` trên env service `app`
 
-Host `postgres-host` lấy từ Dokploy (tên service DB trong cùng project/network).
+Debug tay: `docker exec -it fpt-admission-api-prod bun run src/database/migrate.ts`
 
 ### 3.2 Application (Docker image)
 
-| Trường | Giá trị |
-|--------|---------|
-| **Source** | Docker Hub |
-| **Image** | `<DOCKER_USERNAME>/fpt-admission-api:latest` |
-| **Port container** | `3000` |
-| **Port public** | `3000` (hoặc để Dokploy proxy 80/443) |
+| Trường             | Giá trị                                      |
+| ------------------ | -------------------------------------------- |
+| **Source**         | Docker Hub                                   |
+| **Image**          | `<DOCKER_USERNAME>/fpt-admission-api:latest` |
+| **Port container** | `3000`                                       |
+| **Port public**    | `3000` (hoặc để Dokploy proxy 80/443)        |
 
 **Build**: tắt — không build trên VPS, chỉ **pull** image.
 
@@ -116,11 +114,11 @@ CORS_ORIGINS=https://your-frontend.com,https://admin.your-domain.com
 DATABASE_URL=postgresql://USER:PASSWORD@<postgres-service-host>:1111/fpt_admission_prod
 ```
 
-| Biến | Ghi chú |
-|------|---------|
+| Biến           | Ghi chú                                                                                       |
+| -------------- | --------------------------------------------------------------------------------------------- |
 | `DATABASE_URL` | Host = **tên service Postgres** trong Dokploy (không phải `localhost` từ trong container API) |
-| `JWT_SECRET` | Khác dev, không chia sẻ |
-| `CORS_ORIGINS` | Domain frontend thật, phân cách bằng dấu phẩy |
+| `JWT_SECRET`   | Khác dev, không chia sẻ                                                                       |
+| `CORS_ORIGINS` | Domain frontend thật, phân cách bằng dấu phẩy                                                 |
 
 Tham chiếu compose: [`docker/docker-compose.dokploy.yml`](../docker/docker-compose.dokploy.yml)
 

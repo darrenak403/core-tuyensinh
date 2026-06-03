@@ -25,17 +25,15 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT:-1111}/${POSTGRES_DB}
       JWT_SECRET: ${JWT_SECRET}
       CORS_ORIGINS: ${CORS_ORIGINS}
+      SKIP_MIGRATE: ${SKIP_MIGRATE:-0}
+      MIGRATE_RETRIES: ${MIGRATE_RETRIES:-10}
     ports:
-      - "${PORT:-2222}:${PORT:-2222}"
+      - '${PORT:-2222}:${PORT:-2222}'
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "curl -f http://localhost:$${PORT:-2222}/health || exit 1",
-        ]
+      test: ['CMD-SHELL', 'curl -f http://localhost:$${PORT:-2222}/health || exit 1']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -55,13 +53,9 @@ services:
       PGPORT: ${POSTGRES_PORT:-1111}
     volumes:
       - postgres_data_prod:/var/lib/postgresql/data
-      - ../src/database:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test:
-        [
-          "CMD-SHELL",
-          "pg_isready -p ${POSTGRES_PORT:-1111} -U ${POSTGRES_USER} -d ${POSTGRES_DB}",
-        ]
+        ['CMD-SHELL', 'pg_isready -p ${POSTGRES_PORT:-1111} -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -76,7 +70,7 @@ services:
     environment:
       ADMINER_DEFAULT_SERVER: postgres:${POSTGRES_PORT:-1111}
     ports:
-      - "${ADMINER_PORT:-4444}:8080"
+      - '${ADMINER_PORT:-4444}:8080'
     depends_on:
       postgres:
         condition: service_healthy

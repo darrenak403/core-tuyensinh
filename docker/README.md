@@ -12,11 +12,11 @@ task dev            # API :2222 trên host
 task db             # migration (đã chạy thì bỏ qua) + seed (có data thì bỏ qua)
 ```
 
-| Service | URL |
-|---------|-----|
-| API | http://localhost:2222 |
-| PostgreSQL | localhost:1111 |
-| Adminer | http://localhost:4444 |
+| Service    | URL                   |
+| ---------- | --------------------- |
+| API        | http://localhost:2222 |
+| PostgreSQL | localhost:1111        |
+| Adminer    | http://localhost:4444 |
 
 **Adminer** — http://localhost:4444 → **PostgreSQL**, Server `postgres:1111` (port **1111**, không 5432), User/Password `postgres`, Database `fpt_admission_dev`.
 
@@ -24,11 +24,12 @@ task db             # migration (đã chạy thì bỏ qua) + seed (có data th�
 
 **Xóa sạch dev** — `task clear` (dừng container + xóa volume Postgres). Tạo lại: `task setup` → `task db`.
 
-## Prod (Dokploy)
+## Prod (Dokploy) — auto migrate
 
-1. GitHub push `main` → image `{DOCKER_USERNAME}/fpt-admission-api:latest`
-2. Dokploy: compose file **`docker/docker-compose.prod.yml`**
-3. Env trên Dokploy UI (không commit `docker/.env`):
+1. Push `main` → CI push image `{DOCKER_USERNAME}/fpt-admission-api:latest`
+2. Dokploy: **`docker/docker-compose.prod.yml`**
+3. Redeploy → container `app`: **migrate → API** (entrypoint, không cần code trên VPS)
+4. Env Dokploy:
 
 ```env
 DOCKER_USERNAME=...
@@ -49,9 +50,9 @@ Registry credentials Dokploy: `DOCKER_USERNAME` + `DOCKER_PASSWORD`.
 
 ## Files
 
-| File | Mục đích |
-|------|----------|
-| `Dockerfile` | Build image API (Bun) |
-| `docker-compose.dev.yml` | Postgres + Adminer dev |
+| File                      | Mục đích                      |
+| ------------------------- | ----------------------------- |
+| `Dockerfile`              | Build image API (Bun)         |
+| `docker-compose.dev.yml`  | Postgres + Adminer dev        |
 | `docker-compose.prod.yml` | API + Postgres + Adminer prod |
-| `.env.example` | Mẫu biến (dev copy → `.env`) |
+| `.env.example`            | Mẫu biến (dev copy → `.env`)  |
