@@ -27,9 +27,7 @@ function getServerConfig() {
  * Configures OpenAPI spec generation for development
  */
 export function setupOpenAPIDoc(app: OpenAPIHono) {
-  // OpenAPI JSON endpoint - only in development
-  if (env.NODE_ENV === "development") {
-    app.doc(OPENAPI_CONFIG.PATHS.OPENAPI_JSON, {
+  app.doc(OPENAPI_CONFIG.PATHS.OPENAPI_JSON, {
       openapi: OPENAPI_CONFIG.VERSION,
       info: {
         version: API_INFO.VERSION,
@@ -65,5 +63,4 @@ export function setupOpenAPIDoc(app: OpenAPIHono) {
         },
       ],
     });
-  }
 }
