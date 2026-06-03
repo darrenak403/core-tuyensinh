@@ -1,22 +1,18 @@
 # Production: API + Postgres
 #
-# GitHub Actions push:  ${DOCKER_USERNAME}/fpt-admission-api:latest
-# Dokploy: compose file này + env trên UI (không cần docker/.env trên VPS)
+# Image (CI): ${DOCKER_USERNAME}/fpt-admission-api:latest
+# Dokploy: compose file này + env trên UI
 #
-# Biến bắt buộc (Dokploy / docker/.env local):
-#   DOCKER_USERNAME, JWT_SECRET, CORS_ORIGINS
-#   POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD
-#
-# Tùy chọn: APP_TAG (default latest), PORT (default 2222), LOG_LEVEL, POSTGRES_PORT (default 1111)
-#   ADMINER_PORT (default 4444)
+# Bắt buộc: DOCKER_USERNAME, JWT_SECRET, CORS_ORIGINS, POSTGRES_*
+# Tùy chọn: APP_TAG, PORT, LOG_LEVEL, POSTGRES_PORT, ADMINER_PORT, SKIP_MIGRATE
 
-name: fpt-admission-prod
+name: fpt-core-prod
 
 services:
   app:
     image: ${DOCKER_USERNAME}/fpt-admission-api:${APP_TAG:-latest}
     pull_policy: always
-    container_name: fpt-admission-api-prod
+    container_name: fpt-api-prod
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -28,22 +24,26 @@ services:
       SKIP_MIGRATE: ${SKIP_MIGRATE:-0}
       MIGRATE_RETRIES: ${MIGRATE_RETRIES:-10}
     ports:
-      - '${PORT:-2222}:${PORT:-2222}'
+      - "${PORT:-2222}:${PORT:-2222}"
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ['CMD-SHELL', 'curl -f http://localhost:$${PORT:-2222}/health || exit 1']
+      test:
+        [
+          "CMD-SHELL",
+          "curl -f http://localhost:$${PORT:-2222}/health || exit 1",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
     networks:
-      - backend
+      - fpt-net-prod
 
   postgres:
     image: postgres:17-alpine
-    container_name: fpt-admission-postgres-prod
+    container_name: fpt-postgres-prod
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -52,34 +52,39 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
       PGPORT: ${POSTGRES_PORT:-1111}
     volumes:
-      - postgres_data_prod:/var/lib/postgresql/data
+      - fpt-postgres-data-prod:/var/lib/postgresql/data
     healthcheck:
       test:
-        ['CMD-SHELL', 'pg_isready -p ${POSTGRES_PORT:-1111} -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+        [
+          "CMD-SHELL",
+          "pg_isready -p ${POSTGRES_PORT:-1111} -U ${POSTGRES_USER} -d ${POSTGRES_DB}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
     networks:
-      - backend
+      - fpt-net-prod
 
   adminer:
     image: adminer:4
-    container_name: fpt-admission-adminer-prod
+    container_name: fpt-adminer-prod
     restart: unless-stopped
     environment:
       ADMINER_DEFAULT_SERVER: postgres:${POSTGRES_PORT:-1111}
     ports:
-      - '${ADMINER_PORT:-4444}:8080'
+      - "${ADMINER_PORT:-4444}:8080"
     depends_on:
       postgres:
         condition: service_healthy
     networks:
-      - backend
+      - fpt-net-prod
 
 networks:
-  backend:
+  fpt-net-prod:
+    name: fpt-net-prod
     driver: bridge
 
 volumes:
-  postgres_data_prod:
+  fpt-postgres-data-prod:
+    name: fpt-postgres-data-prod

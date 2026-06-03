@@ -83,7 +83,7 @@ Tạo **PostgreSQL** trên Dokploy (hoặc DB có sẵn):
 - Không tạo user admin — sau deploy gọi `POST /api/v1/auth/register`
 - Tắt: `SKIP_MIGRATE=1` trên env service `app`
 
-Debug tay: `docker exec -it fpt-admission-api-prod bun run src/database/migrate.ts`
+Debug tay: `docker exec -it fpt-api-prod bun run src/database/migrate.ts`
 
 ### 3.2 Application (Docker image)
 

@@ -1,11 +1,11 @@
 # Dev: PostgreSQL + Adminer. API trên host: task dev (không build/push image — CI làm)
 
-name: fpt-admission-dev
+name: fpt-core-dev
 
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: fpt-admission-postgres-dev
+    container_name: fpt-postgres-dev
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-fpt_admission_dev}
@@ -15,7 +15,7 @@ services:
     ports:
       - "${POSTGRES_PORT:-1111}:${POSTGRES_PORT:-1111}"
     volumes:
-      - postgres_data_dev:/var/lib/postgresql/data
+      - fpt-postgres-data-dev:/var/lib/postgresql/data
     healthcheck:
       test:
         [
@@ -27,14 +27,13 @@ services:
       retries: 5
       start_period: 10s
     networks:
-      - dev
+      - fpt-net-dev
 
   adminer:
     image: adminer:4
-    container_name: fpt-admission-adminer-dev
+    container_name: fpt-adminer-dev
     restart: unless-stopped
     environment:
-      # Host:port — Postgres dev dùng PGPORT 1111, không phải 5432
       ADMINER_DEFAULT_SERVER: postgres:1111
     ports:
       - "${ADMINER_PORT:-4444}:8080"
@@ -42,11 +41,13 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - dev
+      - fpt-net-dev
 
 networks:
-  dev:
+  fpt-net-dev:
+    name: fpt-net-dev
     driver: bridge
 
 volumes:
-  postgres_data_dev:
+  fpt-postgres-data-dev:
+    name: fpt-postgres-data-dev
