@@ -16,6 +16,77 @@ const args = process.argv.slice(2);
 const shouldReset = args.includes("--reset");
 const assumeYes = args.includes("--yes");
 
+// ── Programmatic API (called from index.ts on server start) ──────────────────
+
+export async function runMigrations(): Promise<void> {
+  const migDb = new SQL({ url: env.DATABASE_URL, max: 1 });
+  try {
+    await ensureMigrationsTableWith(migDb);
+    let applied = await getAppliedMigrationsWith(migDb);
+
+    const schemaPaths = await listSqlFiles(SCHEMA_DIR);
+    const viewPaths = await listSqlFiles(VIEWS_DIR);
+    const migrations = [
+      ...schemaPaths.map((path) => ({ key: `schema:${basename(path)}`, path })),
+      ...viewPaths.map((path) => ({ key: `view:${basename(path)}`, path })),
+    ];
+
+    for (const { key, path } of migrations) {
+      if (applied.has(key)) continue;
+      const sql = await Bun.file(path).text();
+      await migDb.unsafe(sql);
+      await migDb`INSERT INTO _schema_migrations (name) VALUES (${key})`;
+    }
+
+    applied = await getAppliedMigrationsWith(migDb);
+    await applySeedsWith(migDb, applied);
+  } finally {
+    await migDb.end();
+  }
+}
+
+async function ensureMigrationsTableWith(db: SQL): Promise<void> {
+  await db`
+    CREATE TABLE IF NOT EXISTS _schema_migrations (
+      name TEXT PRIMARY KEY,
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+}
+
+async function getAppliedMigrationsWith(db: SQL): Promise<Set<string>> {
+  await ensureMigrationsTableWith(db);
+  const rows = await db<{ name: string }[]>`SELECT name FROM _schema_migrations`;
+  return new Set(rows.map((r) => r.name));
+}
+
+async function hasSeedDataWith(db: SQL): Promise<boolean> {
+  try {
+    const [row] = await db<{ count: number }[]>`SELECT COUNT(*)::int AS count FROM departments`;
+    return (row?.count ?? 0) > 0;
+  } catch {
+    return false;
+  }
+}
+
+async function applySeedsWith(db: SQL, applied: Set<string>): Promise<void> {
+  if (await hasSeedDataWith(db)) return;
+  const paths = await listSqlFiles(SEEDS_DIR);
+  for (const path of paths) {
+    const key = `seed:${basename(path)}`;
+    if (applied.has(key)) continue;
+    try {
+      const sql = await Bun.file(path).text();
+      await db.unsafe(sql);
+      await db`INSERT INTO _schema_migrations (name) VALUES (${key})`;
+    } catch {
+      if (await hasSeedDataWith(db)) {
+        await db`INSERT INTO _schema_migrations (name) VALUES (${key}) ON CONFLICT DO NOTHING`;
+      }
+    }
+  }
+}
+
 const db = new SQL({
   url: env.DATABASE_URL,
   max: 1,

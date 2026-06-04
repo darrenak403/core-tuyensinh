@@ -2,6 +2,7 @@ import { createApp } from "@/app";
 import { closeDatabaseConnection } from "@config/database";
 import { env } from "@config/env";
 import { logger } from "@config/logger";
+import { runMigrations } from "@/database/migrate";
 
 const shutdown = async (signal: string) => {
   logger.info({ signal }, "Shutting down gracefully");
@@ -21,6 +22,18 @@ const shutdown = async (signal: string) => {
 
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
+
+logger.info("Running database migrations...");
+try {
+  await runMigrations();
+  logger.info("Database migrations completed");
+} catch (error) {
+  logger.error(
+    { error: error instanceof Error ? error.message : error },
+    "Migration failed — server will not start"
+  );
+  process.exit(1);
+}
 
 const app = createApp();
 

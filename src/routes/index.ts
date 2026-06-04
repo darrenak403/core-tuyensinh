@@ -5,6 +5,11 @@ import campusesRoutes from "@routes/campuses";
 import dashboardRoutes from "@routes/dashboard";
 import departmentsRoutes from "@routes/departments";
 import docsRoutes from "@routes/docs";
+import faqAnswersRoutes from "@routes/faq-answers";
+import faqCollectionsRoutes from "@routes/faq-collections";
+import faqQuestionsRoutes from "@routes/faq-questions";
+import faqSubTopicsRoutes from "@routes/faq-sub-topics";
+import faqTopicsRoutes from "@routes/faq-topics";
 import healthRoutes from "@routes/health";
 import programsRoutes from "@routes/programs";
 import scholarshipsRoutes from "@routes/scholarships";
@@ -47,6 +52,13 @@ export function setupRoutes(app: OpenAPIHono) {
 
   // Users routes
   app.route("/", usersRoutes);
+
+  // FAQ routes
+  app.route("/", faqTopicsRoutes);
+  app.route("/", faqSubTopicsRoutes);
+  app.route("/", faqQuestionsRoutes);
+  app.route("/", faqAnswersRoutes);
+  app.route("/", faqCollectionsRoutes);
 
   return app;
 }
