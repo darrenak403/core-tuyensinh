@@ -82,7 +82,8 @@ export class FaqCollectionsService extends BaseService<FaqCollectionPublic, Crea
   }
 
   async addItems(collectionId: string, questionIds: string[]): Promise<number> {
-    const [row] = await db`SELECT add_faq_collection_items(${collectionId}, ${questionIds}) AS inserted`;
+    const uuidArray = questionIds.length > 0 ? `{${questionIds.join(',')}}` : '{}';
+    const [row] = await db`SELECT add_faq_collection_items(${collectionId}, ${uuidArray}::uuid[]) AS inserted`;
     return Number(row?.inserted ?? 0);
   }
 

@@ -6,7 +6,7 @@
 -- FAQ Main Topics (Chủ đề chính)
 CREATE TABLE IF NOT EXISTS faq_topics (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v8(),
-    code VARCHAR(20) UNIQUE NOT NULL,
+    code VARCHAR(100) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT,
     sort_order INTEGER DEFAULT 0,

@@ -49,6 +49,10 @@ $$ LANGUAGE plpgsql IMMUTABLE;
 -- 2. DDL CHANGES
 -- ============================================================
 
+-- 2a-pre. Widen faq_topics.code from VARCHAR(20) to VARCHAR(100)
+--         (auto-slug from long names can exceed 20 chars)
+ALTER TABLE faq_topics ALTER COLUMN code TYPE VARCHAR(100);
+
 -- 2a. Add code to faq_sub_topics
 ALTER TABLE faq_sub_topics ADD COLUMN IF NOT EXISTS code VARCHAR(100);
 
@@ -502,7 +506,7 @@ BEGIN
 
     v_code := v_topic_code || '_' || v_sub_code || '_' || LPAD(v_seq::TEXT, 3, '0');
     v_counter := 0;
-    WHILE EXISTS (SELECT 1 FROM faq_questions WHERE code = v_code) LOOP
+    WHILE EXISTS (SELECT 1 FROM faq_questions WHERE faq_questions.code = v_code) LOOP
         v_seq := v_seq + 1;
         v_code := v_topic_code || '_' || v_sub_code || '_' || LPAD(v_seq::TEXT, 3, '0');
         v_counter := v_counter + 1;
