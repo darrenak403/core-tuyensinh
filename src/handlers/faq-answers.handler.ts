@@ -7,11 +7,9 @@ const service = new FaqAnswersService();
 export const getFaqAnswersHandler = async (c: Context) => {
   const limit = Number(c.req.query("limit")) || 50;
   const offset = Number(c.req.query("offset")) || 0;
-  const year = c.req.query("admission_year") ? Number(c.req.query("admission_year")) : undefined;
   const filters = {
     question_id: c.req.query("question_id"),
     campus_id: c.req.query("campus_id"),
-    admission_year: year,
     status: c.req.query("status"),
   };
   return c.json(await service.findAll(filters, limit, offset), 200);
@@ -20,8 +18,7 @@ export const getFaqAnswersHandler = async (c: Context) => {
 export const getFaqAnswersByQuestionHandler = async (c: Context) => {
   const questionId = c.req.param("questionId")!;
   const campusId = c.req.query("campus_id");
-  const year = c.req.query("admission_year") ? Number(c.req.query("admission_year")) : undefined;
-  return c.json(await service.findByQuestion(questionId, campusId, year), 200);
+  return c.json(await service.findByQuestion(questionId, campusId), 200);
 };
 
 export const getFaqAnswerHandler = async (c: Context) => {
@@ -66,14 +63,12 @@ export const deleteFaqAnswerHandler = async (c: Context) => {
 export const searchFaqHandler = async (c: Context) => {
   const limit = Number(c.req.query("limit")) || 50;
   const offset = Number(c.req.query("offset")) || 0;
-  const year = c.req.query("admission_year") ? Number(c.req.query("admission_year")) : undefined;
   const filters = {
     topic_id: c.req.query("topic_id"),
     sub_topic_id: c.req.query("sub_topic_id"),
     campus_id: c.req.query("campus_id"),
-    admission_year: year,
     keyword: c.req.query("keyword"),
-    status: c.req.query("status") ?? "published",
+    status: c.req.query("status") ?? "approved",
   };
   return c.json(await service.search(filters, limit, offset), 200);
 };

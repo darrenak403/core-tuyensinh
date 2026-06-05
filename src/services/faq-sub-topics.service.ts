@@ -9,6 +9,7 @@ export class FaqSubTopicsService extends BaseService<FaqSubTopicPublic, CreateFa
   protected readonly publicSchema = z.object({
     id: commonSchemas.uuid,
     topic_id: commonSchemas.uuid,
+    code: z.string(),
     name: z.string(),
     description: commonSchemas.optionalString,
     sort_order: z.number(),

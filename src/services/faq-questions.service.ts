@@ -2,6 +2,7 @@ import { db } from "@config/database";
 import type {
   CreateFaqQuestionRequest,
   FaqQuestionPublic,
+  FaqQuestionsQuery,
   QuestionStatus,
   UpdateFaqQuestionRequest,
 } from "@app-types/faq";
@@ -10,14 +11,13 @@ import { BaseService, type PaginatedResponse, commonSchemas } from "./base.servi
 
 const questionPublicSchema = z.object({
   id: commonSchemas.uuid,
+  code: z.string(),
   sub_topic_id: commonSchemas.uuid,
   content: z.string(),
   status: z.string(),
   created_by: z.string().uuid().nullable().optional(),
   approved_by: z.string().uuid().nullable().optional(),
   approved_at: z.union([z.string(), z.date()]).nullable().optional(),
-  published_by: z.string().uuid().nullable().optional(),
-  published_at: z.union([z.string(), z.date()]).nullable().optional(),
   rejected_by: z.string().uuid().nullable().optional(),
   rejected_at: z.union([z.string(), z.date()]).nullable().optional(),
   rejection_reason: commonSchemas.optionalString,
@@ -32,18 +32,27 @@ export class FaqQuestionsService extends BaseService<FaqQuestionPublic, CreateFa
   protected readonly updateSchema = z.object({ content: z.string().optional(), sub_topic_id: z.string().optional() });
 
   async findAll(
-    filters: { sub_topic_id?: string; status?: string },
+    filters: FaqQuestionsQuery,
     limit = 50,
     offset = 0
   ): Promise<PaginatedResponse<FaqQuestionPublic>> {
     const [dataRows, countRows] = await Promise.all([
       db`SELECT * FROM get_faq_questions_with_pagination(
           ${filters.sub_topic_id ?? null},
+          ${filters.topic_id ?? null},
           ${filters.status ?? null},
+          ${filters.content ?? null},
+          ${filters.code ?? null},
           ${limit},
           ${offset}
         )`,
-      db`SELECT get_faq_questions_count(${filters.sub_topic_id ?? null}, ${filters.status ?? null}) AS total`,
+      db`SELECT get_faq_questions_count(
+          ${filters.sub_topic_id ?? null},
+          ${filters.topic_id ?? null},
+          ${filters.status ?? null},
+          ${filters.content ?? null},
+          ${filters.code ?? null}
+        ) AS total`,
     ]);
     return this.createPaginatedResponse(this.parseMany(dataRows), this.extractTotal(countRows), limit, offset);
   }

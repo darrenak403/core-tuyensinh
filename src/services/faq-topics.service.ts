@@ -16,8 +16,8 @@ export class FaqTopicsService extends BaseService<FaqTopicPublic, CreateFaqTopic
   });
 
   protected readonly createSchema = z.object({
-    code: z.string(),
     name: z.string(),
+    code: z.string().optional(),
     description: z.string().optional(),
     sort_order: z.number().optional(),
   });
@@ -46,8 +46,8 @@ export class FaqTopicsService extends BaseService<FaqTopicPublic, CreateFaqTopic
   async create(data: CreateFaqTopicRequest): Promise<FaqTopicPublic> {
     const [row] = await db`
       SELECT * FROM create_faq_topic(
-        ${data.code},
         ${data.name},
+        ${data.code ?? null},
         ${data.description ?? null},
         ${data.sort_order ?? 0}
       )

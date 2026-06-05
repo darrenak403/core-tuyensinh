@@ -1,5 +1,6 @@
 import {
   addFaqCollectionItemsHandler,
+  copyFaqCollectionHandler,
   createFaqCollectionHandler,
   deleteFaqCollectionHandler,
   getFaqCollectionHandler,
@@ -14,6 +15,7 @@ import {
   addCollectionItemsResponseSchema,
   addCollectionItemsSchema,
   collectionItemParamSchema,
+  copyCollectionSchema,
   createFaqCollectionSchema,
   deleteResponseSchema,
   faqCollectionResponseSchema,
@@ -55,6 +57,7 @@ const createFaqCollectionRoute = createRoute({
   path: "/api/v1/faq/collections",
   middleware: [authMiddleware, requireAdmin] as const,
   summary: "Create FAQ collection",
+  description: "Create a new collection for a specific admission year",
   tags: ["FAQ Collections"],
   request: { body: { content: { "application/json": { schema: createFaqCollectionSchema } } } },
   responses: {
@@ -96,11 +99,28 @@ const transitionFaqCollectionStatusRoute = createRoute({
   },
 });
 
+const copyFaqCollectionRoute = createRoute({
+  method: "post",
+  path: "/api/v1/faq/collections/{id}/copy",
+  middleware: [authMiddleware, requireAdmin] as const,
+  summary: "Copy collection to a new admission year",
+  description: "Creates a new draft collection with the same questions. Useful for cloning 2026 → 2027.",
+  tags: ["FAQ Collections"],
+  request: {
+    params: uuidParamSchema,
+    body: { content: { "application/json": { schema: copyCollectionSchema } } },
+  },
+  responses: {
+    201: { content: { "application/json": { schema: faqCollectionResponseSchema } }, description: "New collection created" },
+    404: { content: { "application/json": { schema: faqErrorSchema } }, description: "Source collection not found" },
+  },
+});
+
 const addFaqCollectionItemsRoute = createRoute({
   method: "post",
   path: "/api/v1/faq/collections/{id}/items",
   middleware: [authMiddleware, requireAdmin] as const,
-  summary: "Add answers to a collection",
+  summary: "Add questions to a collection",
   tags: ["FAQ Collections"],
   request: {
     params: uuidParamSchema,
@@ -108,15 +128,15 @@ const addFaqCollectionItemsRoute = createRoute({
   },
   responses: {
     200: { content: { "application/json": { schema: addCollectionItemsResponseSchema } }, description: "Items added" },
-    404: { content: { "application/json": { schema: faqErrorSchema } }, description: "Collection not found" },
+    404: { content: { "application/json": { schema: faqErrorSchema } }, description: "Collection or question not found" },
   },
 });
 
 const removeFaqCollectionItemRoute = createRoute({
   method: "delete",
-  path: "/api/v1/faq/collections/{id}/items/{answerId}",
+  path: "/api/v1/faq/collections/{id}/items/{questionId}",
   middleware: [authMiddleware, requireAdmin] as const,
-  summary: "Remove an answer from a collection",
+  summary: "Remove a question from a collection",
   tags: ["FAQ Collections"],
   request: { params: collectionItemParamSchema },
   responses: {
@@ -143,6 +163,7 @@ app.openapi(getFaqCollectionRoute, getFaqCollectionHandler);
 app.openapi(createFaqCollectionRoute, createFaqCollectionHandler);
 app.openapi(updateFaqCollectionRoute, updateFaqCollectionHandler);
 app.openapi(transitionFaqCollectionStatusRoute, transitionFaqCollectionStatusHandler);
+app.openapi(copyFaqCollectionRoute, copyFaqCollectionHandler);
 app.openapi(addFaqCollectionItemsRoute, addFaqCollectionItemsHandler);
 app.openapi(removeFaqCollectionItemRoute, removeFaqCollectionItemHandler);
 app.openapi(deleteFaqCollectionRoute, deleteFaqCollectionHandler);

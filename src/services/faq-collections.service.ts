@@ -1,6 +1,7 @@
 import { db } from "@config/database";
 import type {
   CollectionStatus,
+  CopyFaqCollectionRequest,
   CreateFaqCollectionRequest,
   FaqCollectionPublic,
   UpdateFaqCollectionRequest,
@@ -14,7 +15,6 @@ const collectionPublicSchema = z.object({
   name: z.string(),
   description: commonSchemas.optionalString,
   admission_year: z.number(),
-  campus_id: z.string().uuid().nullable().optional(),
   status: z.string(),
   published_by: z.string().uuid().nullable().optional(),
   published_at: z.union([z.string(), z.date()]).nullable().optional(),
@@ -27,7 +27,7 @@ export class FaqCollectionsService extends BaseService<FaqCollectionPublic, Crea
   protected readonly updateSchema = updateFaqCollectionSchema as z.ZodType<UpdateFaqCollectionRequest, any, any>;
 
   async findAll(
-    filters: { status?: string; admission_year?: number; campus_id?: string },
+    filters: { status?: string; admission_year?: number },
     limit = 50,
     offset = 0
   ): Promise<PaginatedResponse<FaqCollectionPublic>> {
@@ -35,14 +35,12 @@ export class FaqCollectionsService extends BaseService<FaqCollectionPublic, Crea
       db`SELECT * FROM get_faq_collections_with_pagination(
           ${filters.status ?? null},
           ${filters.admission_year ?? null},
-          ${filters.campus_id ?? null},
           ${limit},
           ${offset}
         )`,
       db`SELECT get_faq_collections_count(
           ${filters.status ?? null},
-          ${filters.admission_year ?? null},
-          ${filters.campus_id ?? null}
+          ${filters.admission_year ?? null}
         ) AS total`,
     ]);
     return this.createPaginatedResponse(this.parseMany(dataRows), this.extractTotal(countRows), limit, offset);
@@ -58,8 +56,7 @@ export class FaqCollectionsService extends BaseService<FaqCollectionPublic, Crea
       SELECT * FROM create_faq_collection(
         ${data.name},
         ${data.admission_year},
-        ${data.description ?? null},
-        ${data.campus_id ?? null}
+        ${data.description ?? null}
       )
     `;
     return this.parseOne(row);
@@ -71,8 +68,7 @@ export class FaqCollectionsService extends BaseService<FaqCollectionPublic, Crea
         ${id},
         ${data.name ?? null},
         ${data.description ?? null},
-        ${data.admission_year ?? null},
-        ${data.campus_id ?? null}
+        ${data.admission_year ?? null}
       )
     `;
     return this.parseOne(row);
@@ -85,13 +81,24 @@ export class FaqCollectionsService extends BaseService<FaqCollectionPublic, Crea
     return this.parseOne(row);
   }
 
-  async addItems(collectionId: string, answerIds: string[]): Promise<number> {
-    const [row] = await db`SELECT add_faq_collection_items(${collectionId}, ${answerIds}) AS inserted`;
+  async addItems(collectionId: string, questionIds: string[]): Promise<number> {
+    const [row] = await db`SELECT add_faq_collection_items(${collectionId}, ${questionIds}) AS inserted`;
     return Number(row?.inserted ?? 0);
   }
 
-  async removeItem(collectionId: string, answerId: string): Promise<void> {
-    await db`SELECT remove_faq_collection_item(${collectionId}, ${answerId})`;
+  async removeItem(collectionId: string, questionId: string): Promise<void> {
+    await db`SELECT remove_faq_collection_item(${collectionId}, ${questionId})`;
+  }
+
+  async copy(sourceId: string, data: CopyFaqCollectionRequest): Promise<FaqCollectionPublic> {
+    const [row] = await db`
+      SELECT * FROM copy_faq_collection(
+        ${sourceId},
+        ${data.admission_year},
+        ${data.name ?? null}
+      )
+    `;
+    return this.parseOne(row);
   }
 
   async delete(id: string): Promise<void> {

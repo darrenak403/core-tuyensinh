@@ -132,7 +132,7 @@ const transitionFaqAnswerStatusRoute = createRoute({
   path: "/api/v1/faq/answers/{id}/status",
   middleware: [authMiddleware, requireAdmin] as const,
   summary: "Transition answer status",
-  description: "Workflow: new→approved→published | new→rejected | approved→updated→re_approved",
+  description: "Workflow: new→approved | new→rejected | approved→deleted | rejected→new",
   tags: ["FAQ"],
   request: {
     params: uuidParamSchema,

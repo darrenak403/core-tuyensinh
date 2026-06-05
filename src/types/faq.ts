@@ -1,5 +1,5 @@
-export type QuestionStatus = "new" | "approved" | "published" | "rejected" | "deleted";
-export type AnswerStatus = "new" | "approved" | "published" | "rejected" | "updated" | "re_approved";
+export type QuestionStatus = "new" | "approved" | "rejected" | "deleted";
+export type AnswerStatus = "new" | "approved" | "rejected" | "deleted";
 export type CollectionStatus = "draft" | "published" | "archived";
 
 // ── DB entities ──────────────────────────────────────────────────────────────
@@ -18,6 +18,7 @@ export interface FaqTopic {
 export interface FaqSubTopic {
   id: string;
   topic_id: string;
+  code: string;
   name: string;
   description?: string;
   sort_order: number;
@@ -28,14 +29,13 @@ export interface FaqSubTopic {
 
 export interface FaqQuestion {
   id: string;
+  code: string;
   sub_topic_id: string;
   content: string;
   status: QuestionStatus;
   created_by?: string;
   approved_by?: string;
   approved_at?: Date;
-  published_by?: string;
-  published_at?: Date;
   rejected_by?: string;
   rejected_at?: Date;
   rejection_reason?: string;
@@ -47,7 +47,6 @@ export interface FaqQuestion {
 export interface FaqAnswer {
   id: string;
   question_id: string;
-  admission_year: number;
   content: string;
   status: AnswerStatus;
   tags?: string[];
@@ -56,8 +55,6 @@ export interface FaqAnswer {
   created_by?: string;
   approved_by?: string;
   approved_at?: Date;
-  published_by?: string;
-  published_at?: Date;
   rejected_by?: string;
   rejected_at?: Date;
   rejection_reason?: string;
@@ -72,7 +69,6 @@ export interface FaqCollection {
   name: string;
   description?: string;
   admission_year: number;
-  campus_id?: string;
   status: CollectionStatus;
   published_by?: string;
   published_at?: Date;
@@ -95,6 +91,7 @@ export interface FaqTopicPublic {
 export interface FaqSubTopicPublic {
   id: string;
   topic_id: string;
+  code: string;
   name: string;
   description?: string;
   sort_order: number;
@@ -103,14 +100,13 @@ export interface FaqSubTopicPublic {
 
 export interface FaqQuestionPublic {
   id: string;
+  code: string;
   sub_topic_id: string;
   content: string;
   status: QuestionStatus;
   created_by?: string;
   approved_by?: string;
   approved_at?: Date;
-  published_by?: string;
-  published_at?: Date;
   rejected_by?: string;
   rejected_at?: Date;
   rejection_reason?: string;
@@ -121,7 +117,6 @@ export interface FaqQuestionPublic {
 export interface FaqAnswerPublic {
   id: string;
   question_id: string;
-  admission_year: number;
   content: string;
   status: AnswerStatus;
   tags?: string[];
@@ -132,8 +127,6 @@ export interface FaqAnswerPublic {
   created_by?: string;
   approved_by?: string;
   approved_at?: Date;
-  published_by?: string;
-  published_at?: Date;
   rejected_by?: string;
   rejected_at?: Date;
   rejection_reason?: string;
@@ -147,7 +140,6 @@ export interface FaqCollectionPublic {
   name: string;
   description?: string;
   admission_year: number;
-  campus_id?: string;
   status: CollectionStatus;
   published_by?: string;
   published_at?: Date;
@@ -164,7 +156,6 @@ export interface FaqSearchResult {
   topic_name: string;
   answer_content: string;
   answer_status: AnswerStatus;
-  admission_year: number;
   campus_ids: string[];
   applies_to_all_campuses: boolean;
   tags?: string[];
@@ -175,8 +166,8 @@ export interface FaqSearchResult {
 // ── Request DTOs ──────────────────────────────────────────────────────────────
 
 export interface CreateFaqTopicRequest {
-  code: string;
   name: string;
+  code?: string;
   description?: string;
   sort_order?: number;
 }
@@ -221,7 +212,6 @@ export interface TransitionQuestionStatusRequest {
 
 export interface CreateFaqAnswerRequest {
   question_id: string;
-  admission_year: number;
   content: string;
   tags?: string[];
   keywords?: string[];
@@ -230,7 +220,6 @@ export interface CreateFaqAnswerRequest {
 
 export interface UpdateFaqAnswerRequest {
   content?: string;
-  admission_year?: number;
   tags?: string[];
   keywords?: string[];
   synonyms?: string[];
@@ -249,14 +238,12 @@ export interface CreateFaqCollectionRequest {
   name: string;
   description?: string;
   admission_year: number;
-  campus_id?: string;
 }
 
 export interface UpdateFaqCollectionRequest {
   name?: string;
   description?: string;
   admission_year?: number;
-  campus_id?: string;
 }
 
 export interface TransitionCollectionStatusRequest {
@@ -264,14 +251,28 @@ export interface TransitionCollectionStatusRequest {
 }
 
 export interface AddCollectionItemsRequest {
-  answer_ids: string[];
+  question_ids: string[];
+}
+
+export interface CopyFaqCollectionRequest {
+  admission_year: number;
+  name?: string;
+}
+
+export interface FaqQuestionsQuery {
+  sub_topic_id?: string;
+  topic_id?: string;
+  status?: QuestionStatus;
+  content?: string;
+  code?: string;
+  limit?: number;
+  offset?: number;
 }
 
 export interface FaqSearchQuery {
   topic_id?: string;
   sub_topic_id?: string;
   campus_id?: string;
-  admission_year?: number;
   keyword?: string;
   status?: string;
   limit?: number;

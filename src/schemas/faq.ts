@@ -28,8 +28,8 @@ export const deleteResponseSchema = z.object({
   message: z.string(),
 });
 
-const questionStatusEnum = z.enum(["new", "approved", "published", "rejected", "deleted"]);
-const answerStatusEnum = z.enum(["new", "approved", "published", "rejected", "updated", "re_approved"]);
+const questionStatusEnum = z.enum(["new", "approved", "rejected", "deleted"]);
+const answerStatusEnum = z.enum(["new", "approved", "rejected", "deleted"]);
 const collectionStatusEnum = z.enum(["draft", "published", "archived"]);
 
 // ── FAQ Topics ────────────────────────────────────────────────────────────────
@@ -44,14 +44,14 @@ export const faqTopicPublicSchema = z.object({
 });
 
 export const createFaqTopicSchema = z.object({
-  code: z.string().min(1).max(20),
   name: z.string().min(1).max(255),
+  code: z.string().min(1).max(50).optional(),
   description: z.string().optional(),
   sort_order: z.number().int().min(0).default(0).optional(),
 });
 
 export const updateFaqTopicSchema = z.object({
-  code: z.string().min(1).max(20).optional(),
+  code: z.string().min(1).max(50).optional(),
   name: z.string().min(1).max(255).optional(),
   description: z.string().optional(),
   sort_order: z.number().int().min(0).optional(),
@@ -71,6 +71,7 @@ export const faqTopicsResponseSchema = z.object({
 export const faqSubTopicPublicSchema = z.object({
   id: z.string().uuid(),
   topic_id: z.string().uuid(),
+  code: z.string(),
   name: z.string(),
   description: z.string().nullable().optional(),
   sort_order: z.number(),
@@ -110,14 +111,13 @@ export const faqSubTopicsResponseSchema = z.object({
 
 export const faqQuestionPublicSchema = z.object({
   id: z.string().uuid(),
+  code: z.string(),
   sub_topic_id: z.string().uuid(),
   content: z.string(),
   status: questionStatusEnum,
   created_by: z.string().uuid().nullable().optional(),
   approved_by: z.string().uuid().nullable().optional(),
   approved_at: z.union([z.string(), z.date()]).nullable().optional(),
-  published_by: z.string().uuid().nullable().optional(),
-  published_at: z.union([z.string(), z.date()]).nullable().optional(),
   rejected_by: z.string().uuid().nullable().optional(),
   rejected_at: z.union([z.string(), z.date()]).nullable().optional(),
   rejection_reason: z.string().nullable().optional(),
@@ -142,7 +142,10 @@ export const transitionQuestionStatusSchema = z.object({
 
 export const faqQuestionsQuerySchema = paginationQuerySchema.extend({
   sub_topic_id: z.string().uuid().optional(),
+  topic_id: z.string().uuid().optional(),
   status: questionStatusEnum.optional(),
+  content: z.string().optional(),
+  code: z.string().optional(),
 });
 
 export const faqQuestionResponseSchema = z.object({ data: faqQuestionPublicSchema });
@@ -156,7 +159,6 @@ export const faqQuestionsResponseSchema = z.object({
 export const faqAnswerPublicSchema = z.object({
   id: z.string().uuid(),
   question_id: z.string().uuid(),
-  admission_year: z.number().int(),
   content: z.string(),
   status: answerStatusEnum,
   tags: z.array(z.string()).nullable().optional(),
@@ -167,8 +169,6 @@ export const faqAnswerPublicSchema = z.object({
   created_by: z.string().uuid().nullable().optional(),
   approved_by: z.string().uuid().nullable().optional(),
   approved_at: z.union([z.string(), z.date()]).nullable().optional(),
-  published_by: z.string().uuid().nullable().optional(),
-  published_at: z.union([z.string(), z.date()]).nullable().optional(),
   rejected_by: z.string().uuid().nullable().optional(),
   rejected_at: z.union([z.string(), z.date()]).nullable().optional(),
   rejection_reason: z.string().nullable().optional(),
@@ -179,7 +179,6 @@ export const faqAnswerPublicSchema = z.object({
 
 export const createFaqAnswerSchema = z.object({
   question_id: z.string().uuid("Invalid question ID"),
-  admission_year: z.number().int().min(2020).max(2050),
   content: z.string().min(1, "Answer content is required"),
   campus_ids: z.any().optional(),
   tags: z.array(z.string()).optional(),
@@ -189,7 +188,6 @@ export const createFaqAnswerSchema = z.object({
 
 export const updateFaqAnswerSchema = z.object({
   content: z.string().min(1).optional(),
-  admission_year: z.number().int().min(2020).max(2050).optional(),
   tags: z.array(z.string()).optional(),
   keywords: z.array(z.string()).optional(),
   synonyms: z.array(z.string()).optional(),
@@ -207,7 +205,6 @@ export const transitionAnswerStatusSchema = z.object({
 export const faqAnswersQuerySchema = paginationQuerySchema.extend({
   question_id: z.string().uuid().optional(),
   campus_id: z.string().uuid().optional(),
-  admission_year: z.coerce.number().int().optional(),
   status: answerStatusEnum.optional(),
 });
 
@@ -228,7 +225,6 @@ export const faqCollectionPublicSchema = z.object({
   name: z.string(),
   description: z.string().nullable().optional(),
   admission_year: z.number().int(),
-  campus_id: z.string().uuid().nullable().optional(),
   status: collectionStatusEnum,
   published_by: z.string().uuid().nullable().optional(),
   published_at: z.union([z.string(), z.date()]).nullable().optional(),
@@ -238,14 +234,12 @@ export const createFaqCollectionSchema = z.object({
   name: z.string().min(1).max(255),
   description: z.string().optional(),
   admission_year: z.number().int().min(2020).max(2050),
-  campus_id: z.string().uuid().optional(),
 });
 
 export const updateFaqCollectionSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   description: z.string().optional(),
   admission_year: z.number().int().min(2020).max(2050).optional(),
-  campus_id: z.string().uuid().optional(),
 });
 
 export const transitionCollectionStatusSchema = z.object({
@@ -253,18 +247,22 @@ export const transitionCollectionStatusSchema = z.object({
 });
 
 export const addCollectionItemsSchema = z.object({
-  answer_ids: z.array(z.string().uuid()).min(1, "At least one answer ID required"),
+  question_ids: z.array(z.string().uuid()).min(1, "At least one question ID required"),
+});
+
+export const copyCollectionSchema = z.object({
+  admission_year: z.number().int().min(2020).max(2050),
+  name: z.string().min(1).max(255).optional(),
 });
 
 export const collectionItemParamSchema = z.object({
   id: z.string().uuid("Invalid collection ID"),
-  answerId: z.string().uuid("Invalid answer ID"),
+  questionId: z.string().uuid("Invalid question ID"),
 });
 
 export const faqCollectionsQuerySchema = paginationQuerySchema.extend({
   status: collectionStatusEnum.optional(),
   admission_year: z.coerce.number().int().optional(),
-  campus_id: z.string().uuid().optional(),
 });
 
 export const faqCollectionResponseSchema = z.object({ data: faqCollectionPublicSchema });
@@ -291,7 +289,6 @@ export const faqSearchResultSchema = z.object({
   topic_name: z.string(),
   answer_content: z.string(),
   answer_status: answerStatusEnum,
-  admission_year: z.number().int(),
   campus_ids: z.array(z.string().uuid()),
   applies_to_all_campuses: z.boolean(),
   tags: z.array(z.string()).nullable().optional(),
@@ -303,7 +300,6 @@ export const faqSearchQuerySchema = paginationQuerySchema.extend({
   topic_id: z.string().uuid().optional(),
   sub_topic_id: z.string().uuid().optional(),
   campus_id: z.string().uuid().optional(),
-  admission_year: z.coerce.number().int().optional(),
   keyword: z.string().optional(),
   status: z.string().optional(),
 });

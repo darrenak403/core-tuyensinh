@@ -9,7 +9,10 @@ export const getFaqQuestionsHandler = async (c: Context) => {
   const offset = Number(c.req.query("offset")) || 0;
   const filters = {
     sub_topic_id: c.req.query("sub_topic_id"),
+    topic_id: c.req.query("topic_id"),
     status: c.req.query("status"),
+    content: c.req.query("content"),
+    code: c.req.query("code"),
   };
   return c.json(await service.findAll(filters, limit, offset), 200);
 };

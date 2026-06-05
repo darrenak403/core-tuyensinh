@@ -15,7 +15,6 @@ const pgArrayField = z.preprocess(parsePgArray, z.array(z.string()));
 const answerPublicSchema = z.object({
   id: commonSchemas.uuid,
   question_id: commonSchemas.uuid,
-  admission_year: z.number(),
   content: z.string(),
   status: z.string(),
   tags: pgArrayField,
@@ -26,8 +25,6 @@ const answerPublicSchema = z.object({
   created_by: z.string().uuid().nullable().optional(),
   approved_by: z.string().uuid().nullable().optional(),
   approved_at: z.union([z.string(), z.date()]).nullable().optional(),
-  published_by: z.string().uuid().nullable().optional(),
-  published_at: z.union([z.string(), z.date()]).nullable().optional(),
   rejected_by: z.string().uuid().nullable().optional(),
   rejected_at: z.union([z.string(), z.date()]).nullable().optional(),
   rejection_reason: commonSchemas.optionalString,
@@ -47,7 +44,6 @@ function toPgUuidArray(arr: string[] | null | undefined): string | null {
   return `{${arr.join(',')}}`;
 }
 
-// Parse PostgreSQL array literals like {uuid1,uuid2} or {"tag1","tag2"} into JS arrays
 function parsePgArray(val: unknown): string[] {
   if (Array.isArray(val)) return val as string[];
   if (typeof val !== 'string' || !val || val === '{}') return [];
@@ -64,7 +60,7 @@ export class FaqAnswersService extends BaseService<FaqAnswerPublic, CreateFaqAns
   protected readonly updateSchema = updateFaqAnswerSchema as z.ZodType<UpdateFaqAnswerRequest, any, any>;
 
   async findAll(
-    filters: { question_id?: string; campus_id?: string; admission_year?: number; status?: string },
+    filters: { question_id?: string; campus_id?: string; status?: string },
     limit = 50,
     offset = 0
   ): Promise<PaginatedResponse<FaqAnswerPublic>> {
@@ -72,7 +68,6 @@ export class FaqAnswersService extends BaseService<FaqAnswerPublic, CreateFaqAns
       db`SELECT * FROM get_faq_answers_with_pagination(
           ${filters.question_id ?? null},
           ${filters.campus_id ?? null},
-          ${filters.admission_year ?? null},
           ${filters.status ?? null},
           ${limit},
           ${offset}
@@ -80,19 +75,14 @@ export class FaqAnswersService extends BaseService<FaqAnswerPublic, CreateFaqAns
       db`SELECT get_faq_answers_count(
           ${filters.question_id ?? null},
           ${filters.campus_id ?? null},
-          ${filters.admission_year ?? null},
           ${filters.status ?? null}
         ) AS total`,
     ]);
     return this.createPaginatedResponse(this.parseMany(dataRows), this.extractTotal(countRows), limit, offset);
   }
 
-  async findByQuestion(
-    questionId: string,
-    campusId?: string,
-    year?: number
-  ): Promise<PaginatedResponse<FaqAnswerPublic>> {
-    return this.findAll({ question_id: questionId, campus_id: campusId, admission_year: year, status: "published" });
+  async findByQuestion(questionId: string, campusId?: string): Promise<PaginatedResponse<FaqAnswerPublic>> {
+    return this.findAll({ question_id: questionId, campus_id: campusId, status: "approved" });
   }
 
   async findById(id: string): Promise<FaqAnswerPublic | null> {
@@ -104,7 +94,6 @@ export class FaqAnswersService extends BaseService<FaqAnswerPublic, CreateFaqAns
     const [row] = await db`
       SELECT * FROM create_faq_answer(
         ${data.question_id},
-        ${data.admission_year},
         ${data.content},
         ${toPgTextArray(data.tags)}::text[],
         ${toPgTextArray(data.keywords)}::text[],
@@ -122,8 +111,7 @@ export class FaqAnswersService extends BaseService<FaqAnswerPublic, CreateFaqAns
         ${data.content ?? null},
         ${toPgTextArray(data.tags)}::text[],
         ${toPgTextArray(data.keywords)}::text[],
-        ${toPgTextArray(data.synonyms)}::text[],
-        ${data.admission_year ?? null}
+        ${toPgTextArray(data.synonyms)}::text[]
       )
     `;
     return this.parseOne(row);
@@ -160,7 +148,6 @@ export class FaqAnswersService extends BaseService<FaqAnswerPublic, CreateFaqAns
       topic_id?: string;
       sub_topic_id?: string;
       campus_id?: string;
-      admission_year?: number;
       keyword?: string;
       status?: string;
     },
@@ -178,7 +165,6 @@ export class FaqAnswersService extends BaseService<FaqAnswerPublic, CreateFaqAns
       topic_name: z.string(),
       answer_content: z.string(),
       answer_status: z.string(),
-      admission_year: z.number(),
       campus_ids: pgArrayField,
       applies_to_all_campuses: z.boolean(),
       tags: pgArrayField,
@@ -191,9 +177,8 @@ export class FaqAnswersService extends BaseService<FaqAnswerPublic, CreateFaqAns
           ${filters.topic_id ?? null},
           ${filters.sub_topic_id ?? null},
           ${filters.campus_id ?? null},
-          ${filters.admission_year ?? null},
           ${filters.keyword ?? null},
-          ${filters.status ?? "published"},
+          ${filters.status ?? "approved"},
           ${limit},
           ${offset}
         )`,
@@ -201,9 +186,8 @@ export class FaqAnswersService extends BaseService<FaqAnswerPublic, CreateFaqAns
           ${filters.topic_id ?? null},
           ${filters.sub_topic_id ?? null},
           ${filters.campus_id ?? null},
-          ${filters.admission_year ?? null},
           ${filters.keyword ?? null},
-          ${filters.status ?? "published"}
+          ${filters.status ?? "approved"}
         ) AS total`,
     ]);
 

@@ -27,6 +27,7 @@ const getFaqQuestionsRoute = createRoute({
   path: "/api/v1/faq/questions",
   middleware: [authMiddleware] as const,
   summary: "List FAQ questions",
+  description: "Filter by topic_id, sub_topic_id, status (new/approved/rejected/deleted), content (text search), code",
   tags: ["FAQ"],
   request: { query: faqQuestionsQuerySchema },
   responses: {
@@ -52,6 +53,7 @@ const createFaqQuestionRoute = createRoute({
   path: "/api/v1/faq/questions",
   middleware: [authMiddleware] as const,
   summary: "Create FAQ question",
+  description: "Code is auto-generated as TOPIC_SUBTOPIC_SEQ (e.g. TUYEN_SINH_HOC_BONG_001)",
   tags: ["FAQ"],
   request: { body: { content: { "application/json": { schema: createFaqQuestionSchema } } } },
   responses: {
@@ -81,7 +83,7 @@ const transitionFaqQuestionStatusRoute = createRoute({
   path: "/api/v1/faq/questions/{id}/status",
   middleware: [authMiddleware, requireAdmin] as const,
   summary: "Transition question status",
-  description: "Workflow: new→approved→published | new→rejected | approved→deleted",
+  description: "Workflow: new→approved | new→rejected | approved→deleted | rejected→new",
   tags: ["FAQ"],
   request: {
     params: uuidParamSchema,

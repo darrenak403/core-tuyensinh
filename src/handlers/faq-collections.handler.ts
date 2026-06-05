@@ -11,7 +11,6 @@ export const getFaqCollectionsHandler = async (c: Context) => {
   const filters = {
     status: c.req.query("status"),
     admission_year: year,
-    campus_id: c.req.query("campus_id"),
   };
   return c.json(await service.findAll(filters, limit, offset), 200);
 };
@@ -42,14 +41,20 @@ export const transitionFaqCollectionStatusHandler = async (c: Context) => {
 };
 
 export const addFaqCollectionItemsHandler = async (c: Context) => {
-  const { answer_ids } = await c.req.json();
-  const inserted = await service.addItems(c.req.param("id")!, answer_ids ?? []);
-  return c.json({ message: `Added ${inserted} answer(s) to collection`, inserted }, 200);
+  const { question_ids } = await c.req.json();
+  const inserted = await service.addItems(c.req.param("id")!, question_ids ?? []);
+  return c.json({ message: `Added ${inserted} question(s) to collection`, inserted }, 200);
 };
 
 export const removeFaqCollectionItemHandler = async (c: Context) => {
-  await service.removeItem(c.req.param("id")!, c.req.param("answerId")!);
-  return c.json({ message: "Answer removed from collection" }, 200);
+  await service.removeItem(c.req.param("id")!, c.req.param("questionId")!);
+  return c.json({ message: "Question removed from collection" }, 200);
+};
+
+export const copyFaqCollectionHandler = async (c: Context) => {
+  const data = await c.req.json();
+  const col = await service.copy(c.req.param("id")!, data);
+  return c.json({ data: col }, 201);
 };
 
 export const deleteFaqCollectionHandler = async (c: Context) => {
