@@ -3,11 +3,25 @@
  * Usage: bun run src/database/migrate.ts [--reset] [--yes]
  */
 import { SQL } from "bun";
+import { existsSync } from "node:fs";
 import { readdir } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { env } from "@config/env";
 
-const ROOT = join(import.meta.dir, "../..");
+/** Project root — must work from src script and from dist bundle (import.meta.dir differs). */
+function resolveProjectRoot(): string {
+  const candidates = [
+    process.cwd(),
+    join(import.meta.dir, "../.."),
+    join(import.meta.dir, "../../.."),
+  ];
+  for (const root of candidates) {
+    if (existsSync(join(root, "src/database/schema"))) return root;
+  }
+  return process.cwd();
+}
+
+const ROOT = resolveProjectRoot();
 const SCHEMA_DIR = join(ROOT, "src/database/schema");
 const VIEWS_DIR = join(SCHEMA_DIR, "05_views");
 const SEEDS_DIR = join(ROOT, "src/database/seeds");
@@ -132,6 +146,7 @@ async function runSqlFile(filePath: string): Promise<void> {
 }
 
 async function listSqlFiles(dir: string): Promise<string[]> {
+  if (!existsSync(dir)) return [];
   const entries = await readdir(dir, { withFileTypes: true });
   return entries
     .filter((e) => e.isFile() && e.name.endsWith(".sql"))
