@@ -103,12 +103,23 @@ ALTER TABLE faq_questions ALTER COLUMN code SET NOT NULL;
 ALTER TABLE faq_questions DROP CONSTRAINT IF EXISTS faq_questions_code_key;
 ALTER TABLE faq_questions ADD CONSTRAINT faq_questions_code_key UNIQUE (code);
 
--- 2g. Question status → 4 states
+-- 2g. Question status → 4 states (migrate existing data first)
+-- published → approved, deleted rows keep deleted via is_active
+UPDATE faq_questions SET status = 'approved' WHERE status = 'published';
+-- any other unexpected value → new
+UPDATE faq_questions SET status = 'new'
+    WHERE status NOT IN ('new', 'approved', 'rejected', 'deleted');
 ALTER TABLE faq_questions DROP CONSTRAINT IF EXISTS faq_questions_status_check;
 ALTER TABLE faq_questions ADD CONSTRAINT faq_questions_status_check
     CHECK (status IN ('new', 'approved', 'rejected', 'deleted'));
 
--- 2h. Answer status → 4 states
+-- 2h. Answer status → 4 states (migrate existing data first)
+-- published / re_approved → approved
+UPDATE faq_answers SET status = 'approved'
+    WHERE status IN ('published', 're_approved', 'updated');
+-- any other unexpected value → new
+UPDATE faq_answers SET status = 'new'
+    WHERE status NOT IN ('new', 'approved', 'rejected', 'deleted');
 ALTER TABLE faq_answers DROP CONSTRAINT IF EXISTS faq_answers_status_check;
 ALTER TABLE faq_answers ADD CONSTRAINT faq_answers_status_check
     CHECK (status IN ('new', 'approved', 'rejected', 'deleted'));
@@ -152,6 +163,9 @@ CREATE INDEX IF NOT EXISTS idx_faq_collection_items_question_id ON faq_collectio
 -- ──────────────────────────────────────────────────────────
 -- FAQ TOPICS (make code optional → auto-generate from name)
 -- ──────────────────────────────────────────────────────────
+
+-- Must drop first because parameter order changed (p_code was 1st, now 2nd with default)
+DROP FUNCTION IF EXISTS create_faq_topic(VARCHAR, VARCHAR, TEXT, INTEGER);
 
 CREATE OR REPLACE FUNCTION create_faq_topic(
     p_name VARCHAR,
@@ -202,6 +216,12 @@ $$ LANGUAGE plpgsql;
 -- ──────────────────────────────────────────────────────────
 -- FAQ SUB TOPICS (add code field)
 -- ──────────────────────────────────────────────────────────
+
+-- RETURNS TABLE changed (added code column) → must drop
+DROP FUNCTION IF EXISTS get_faq_sub_topics_with_pagination(UUID, INTEGER, INTEGER);
+DROP FUNCTION IF EXISTS get_faq_sub_topic_by_id(UUID);
+DROP FUNCTION IF EXISTS create_faq_sub_topic(UUID, VARCHAR, TEXT, INTEGER);
+DROP FUNCTION IF EXISTS update_faq_sub_topic(UUID, UUID, VARCHAR, TEXT, INTEGER, BOOLEAN);
 
 CREATE OR REPLACE FUNCTION get_faq_sub_topics_with_pagination(
     p_topic_id UUID DEFAULT NULL,
@@ -333,6 +353,14 @@ $$ LANGUAGE plpgsql;
 -- ──────────────────────────────────────────────────────────
 -- FAQ QUESTIONS (add code, more filters, new status flow)
 -- ──────────────────────────────────────────────────────────
+
+-- Signature changed (new params, RETURNS TABLE changed) → must drop
+DROP FUNCTION IF EXISTS get_faq_questions_with_pagination(UUID, VARCHAR, INTEGER, INTEGER);
+DROP FUNCTION IF EXISTS get_faq_questions_count(UUID, VARCHAR);
+DROP FUNCTION IF EXISTS get_faq_question_by_id(UUID);
+DROP FUNCTION IF EXISTS create_faq_question(UUID, TEXT, UUID);
+DROP FUNCTION IF EXISTS update_faq_question(UUID, TEXT, UUID);
+DROP FUNCTION IF EXISTS transition_faq_question_status(UUID, VARCHAR, UUID, TEXT);
 
 CREATE OR REPLACE FUNCTION get_faq_questions_with_pagination(
     p_sub_topic_id UUID DEFAULT NULL,
@@ -587,6 +615,15 @@ $$ LANGUAGE plpgsql;
 -- ──────────────────────────────────────────────────────────
 -- FAQ ANSWERS (admission_year nullable, simplified status)
 -- ──────────────────────────────────────────────────────────
+
+-- RETURNS TABLE changed (removed admission_year) + params changed → must drop
+DROP FUNCTION IF EXISTS get_faq_answer_by_id(UUID);
+DROP FUNCTION IF EXISTS get_faq_answers_with_pagination(UUID, UUID, INTEGER, VARCHAR, INTEGER, INTEGER);
+DROP FUNCTION IF EXISTS get_faq_answers_count(UUID, UUID, INTEGER, VARCHAR);
+DROP FUNCTION IF EXISTS create_faq_answer(UUID, INTEGER, TEXT, TEXT[], TEXT[], TEXT[], UUID, UUID[]);
+DROP FUNCTION IF EXISTS update_faq_answer(UUID, TEXT, TEXT[], TEXT[], TEXT[], INTEGER);
+DROP FUNCTION IF EXISTS set_faq_answer_campuses(UUID, UUID[]);
+DROP FUNCTION IF EXISTS transition_faq_answer_status(UUID, VARCHAR, UUID, TEXT);
 
 CREATE OR REPLACE FUNCTION create_faq_answer(
     p_question_id UUID,
@@ -933,6 +970,16 @@ $$ LANGUAGE plpgsql;
 -- FAQ COLLECTIONS (no campus_id, items link to questions)
 -- ──────────────────────────────────────────────────────────
 
+-- RETURNS TABLE changed (removed campus_id) + params changed → must drop
+DROP FUNCTION IF EXISTS get_faq_collections_with_pagination(VARCHAR, INTEGER, UUID, INTEGER, INTEGER);
+DROP FUNCTION IF EXISTS get_faq_collections_count(VARCHAR, INTEGER, UUID);
+DROP FUNCTION IF EXISTS get_faq_collection_by_id(UUID);
+DROP FUNCTION IF EXISTS create_faq_collection(VARCHAR, INTEGER, TEXT, UUID);
+DROP FUNCTION IF EXISTS update_faq_collection(UUID, VARCHAR, TEXT, INTEGER, UUID);
+DROP FUNCTION IF EXISTS transition_faq_collection_status(UUID, VARCHAR, UUID);
+DROP FUNCTION IF EXISTS add_faq_collection_items(UUID, UUID[]);
+DROP FUNCTION IF EXISTS remove_faq_collection_item(UUID, UUID);
+
 CREATE OR REPLACE FUNCTION get_faq_collections_with_pagination(
     p_status VARCHAR DEFAULT NULL,
     p_admission_year INTEGER DEFAULT NULL,
@@ -1207,6 +1254,10 @@ $$ LANGUAGE plpgsql;
 -- ──────────────────────────────────────────────────────────
 -- SEARCH (remove admission_year, simplified status)
 -- ──────────────────────────────────────────────────────────
+
+-- RETURNS TABLE changed (removed admission_year) + params changed → must drop
+DROP FUNCTION IF EXISTS search_faq(UUID, UUID, UUID, INTEGER, TEXT, VARCHAR, INTEGER, INTEGER);
+DROP FUNCTION IF EXISTS search_faq_count(UUID, UUID, UUID, INTEGER, TEXT, VARCHAR);
 
 CREATE OR REPLACE FUNCTION search_faq(
     p_topic_id UUID DEFAULT NULL,
