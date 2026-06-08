@@ -3,6 +3,8 @@ import {
   copyFaqCollectionHandler,
   createFaqCollectionHandler,
   deleteFaqCollectionHandler,
+  exportFaqCollectionCsvHandler,
+  getFaqCollectionDetailHandler,
   getFaqCollectionHandler,
   getFaqCollectionsHandler,
   removeFaqCollectionItemHandler,
@@ -11,6 +13,7 @@ import {
 } from "@handlers/faq-collections.handler";
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { authMiddleware, requireAdmin } from "@middleware/auth";
+import { z } from "zod";
 import {
   addCollectionItemsResponseSchema,
   addCollectionItemsSchema,
@@ -19,6 +22,7 @@ import {
   createFaqCollectionSchema,
   deleteResponseSchema,
   faqCollectionResponseSchema,
+  faqCollectionDetailResponseSchema,
   faqCollectionsQuerySchema,
   faqCollectionsResponseSchema,
   faqErrorSchema,
@@ -48,6 +52,34 @@ const getFaqCollectionRoute = createRoute({
   request: { params: uuidParamSchema },
   responses: {
     200: { content: { "application/json": { schema: faqCollectionResponseSchema } }, description: "Collection" },
+    404: { content: { "application/json": { schema: faqErrorSchema } }, description: "Not found" },
+  },
+});
+
+const getFaqCollectionDetailRoute = createRoute({
+  method: "get",
+  path: "/api/v1/faq/collections/{id}/detail",
+  middleware: [authMiddleware] as const,
+  summary: "Get FAQ collection detail grouped by topic and sub-topic",
+  description: "Returns the question set with topics, sub-topics, questions, answers, year, and campus assignments.",
+  tags: ["FAQ Collections"],
+  request: { params: uuidParamSchema },
+  responses: {
+    200: { content: { "application/json": { schema: faqCollectionDetailResponseSchema } }, description: "Grouped collection detail" },
+    404: { content: { "application/json": { schema: faqErrorSchema } }, description: "Not found" },
+  },
+});
+
+const exportFaqCollectionCsvRoute = createRoute({
+  method: "get",
+  path: "/api/v1/faq/collections/{id}/export.csv",
+  middleware: [authMiddleware] as const,
+  summary: "Export FAQ collection questions and answers as CSV",
+  description: "Exports columns: Cau hoi, Cau tra loi, Nam, Co so. CSV is UTF-8 BOM and can be opened by Excel.",
+  tags: ["FAQ Collections"],
+  request: { params: uuidParamSchema },
+  responses: {
+    200: { content: { "text/csv": { schema: z.string() } }, description: "CSV export for Excel" },
     404: { content: { "application/json": { schema: faqErrorSchema } }, description: "Not found" },
   },
 });
@@ -160,6 +192,8 @@ const deleteFaqCollectionRoute = createRoute({
 
 app.openapi(getFaqCollectionsRoute, getFaqCollectionsHandler);
 app.openapi(getFaqCollectionRoute, getFaqCollectionHandler);
+app.openapi(getFaqCollectionDetailRoute, getFaqCollectionDetailHandler);
+app.openapi(exportFaqCollectionCsvRoute, exportFaqCollectionCsvHandler);
 app.openapi(createFaqCollectionRoute, createFaqCollectionHandler);
 app.openapi(updateFaqCollectionRoute, updateFaqCollectionHandler);
 app.openapi(transitionFaqCollectionStatusRoute, transitionFaqCollectionStatusHandler);

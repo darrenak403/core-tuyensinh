@@ -178,7 +178,7 @@ BEGIN
     END IF;
 
     -- Check for duplicate code
-    IF EXISTS (SELECT 1 FROM campuses WHERE code = campus_code) THEN
+    IF EXISTS (SELECT 1 FROM campuses existing_campus WHERE existing_campus.code = campus_code) THEN
         RAISE EXCEPTION 'Campus with code % already exists', campus_code;
     END IF;
 
@@ -229,8 +229,8 @@ BEGIN
 
     -- Check for duplicate code if updating code
     IF campus_code IS NOT NULL AND EXISTS (
-        SELECT 1 FROM campuses
-        WHERE code = campus_code AND campuses.id != campus_id
+        SELECT 1 FROM campuses existing_campus
+        WHERE existing_campus.code = campus_code AND existing_campus.id != campus_id
     ) THEN
         RAISE EXCEPTION 'Campus with code % already exists', campus_code;
     END IF;
@@ -261,12 +261,16 @@ CREATE OR REPLACE FUNCTION delete_campus_with_validation(campus_id UUID)
 RETURNS VOID AS $$
 BEGIN
     -- Check if campus exists
-    IF NOT EXISTS (SELECT 1 FROM campuses WHERE id = campus_id) THEN
+    IF NOT EXISTS (SELECT 1 FROM campuses existing_campus WHERE existing_campus.id = campus_id) THEN
         RAISE EXCEPTION 'Campus with ID % not found', campus_id;
     END IF;
 
     -- Check if campus has applications
-    IF EXISTS (SELECT 1 FROM applications WHERE applications.campus_id = campus_id) THEN
+    IF EXISTS (
+        SELECT 1
+        FROM applications a
+        WHERE a.campus_id = delete_campus_with_validation.campus_id
+    ) THEN
         RAISE EXCEPTION 'Cannot delete campus with existing applications. Set is_active to false instead.';
     END IF;
 
@@ -274,6 +278,6 @@ BEGIN
     UPDATE campuses SET
         is_active = false,
         updated_at = CURRENT_TIMESTAMP
-    WHERE id = campus_id;
+    WHERE campuses.id = delete_campus_with_validation.campus_id;
 END;
 $$ LANGUAGE plpgsql;

@@ -21,6 +21,32 @@ export const getFaqCollectionHandler = async (c: Context) => {
   return c.json({ data: col }, 200);
 };
 
+export const getFaqCollectionDetailHandler = async (c: Context) => {
+  const col = await service.findDetailById(c.req.param("id")!);
+  if (!col) return c.json({ error: "NOT_FOUND", message: "FAQ collection not found" }, 404);
+  return c.json({ data: col }, 200);
+};
+
+export const exportFaqCollectionCsvHandler = async (c: Context) => {
+  const id = c.req.param("id")!;
+  const rows = await service.getExportRows(id);
+  if (!rows) return c.json({ error: "NOT_FOUND", message: "FAQ collection not found" }, 404);
+
+  const csv = toCsv([
+    ["Câu hỏi", "Câu trả lời", "Năm", "Cơ sở"],
+    ...rows.map((row) => [
+      row.question,
+      row.answer,
+      String(row.admission_year),
+      row.campus,
+    ]),
+  ]);
+
+  c.header("Content-Type", "text/csv; charset=utf-8");
+  c.header("Content-Disposition", `attachment; filename="faq-collection-${id}.csv"`);
+  return c.body(`\uFEFF${csv}`, 200);
+};
+
 export const createFaqCollectionHandler = async (c: Context) => {
   const data = await c.req.json();
   const col = await service.create(data);
@@ -61,3 +87,13 @@ export const deleteFaqCollectionHandler = async (c: Context) => {
   await service.delete(c.req.param("id")!);
   return c.json({ message: "FAQ collection deleted successfully" }, 200);
 };
+
+function toCsv(rows: string[][]): string {
+  return rows
+    .map((row) =>
+      row
+        .map((cell) => `"${cell.replace(/"/g, '""').replace(/\r?\n/g, "\n")}"`)
+        .join(",")
+    )
+    .join("\n");
+}

@@ -145,6 +145,56 @@ export interface FaqCollectionPublic {
   published_at?: Date;
 }
 
+export interface FaqCollectionAnswerDetail {
+  id: string;
+  content: string;
+  status: AnswerStatus;
+  applies_to_all_campuses: boolean;
+  campus_ids: string[];
+  campus_codes: string[];
+  campus_names: string[];
+  tags?: string[];
+  keywords?: string[];
+  synonyms?: string[];
+  version: number;
+}
+
+export interface FaqCollectionQuestionDetail {
+  id: string;
+  code: string;
+  content: string;
+  status: QuestionStatus;
+  sort_order: number;
+  answers: FaqCollectionAnswerDetail[];
+}
+
+export interface FaqCollectionSubTopicDetail {
+  id: string;
+  code: string;
+  name: string;
+  sort_order: number;
+  questions: FaqCollectionQuestionDetail[];
+}
+
+export interface FaqCollectionTopicDetail {
+  id: string;
+  code: string;
+  name: string;
+  sort_order: number;
+  sub_topics: FaqCollectionSubTopicDetail[];
+}
+
+export interface FaqCollectionDetail extends FaqCollectionPublic {
+  topics: FaqCollectionTopicDetail[];
+}
+
+export interface FaqCollectionExportRow {
+  question: string;
+  answer: string;
+  admission_year: number;
+  campus: string;
+}
+
 export interface FaqSearchResult {
   answer_id: string;
   question_id: string;
@@ -291,6 +341,7 @@ export interface FaqAnswerResponse { data: FaqAnswerPublic }
 export interface FaqAnswersResponse { data: FaqAnswerPublic[]; meta: PaginationMeta }
 export interface FaqCollectionResponse { data: FaqCollectionPublic }
 export interface FaqCollectionsResponse { data: FaqCollectionPublic[]; meta: PaginationMeta }
+export interface FaqCollectionDetailResponse { data: FaqCollectionDetail }
 export interface FaqSearchResponse { data: FaqSearchResult[]; meta: PaginationMeta }
 
 interface PaginationMeta {

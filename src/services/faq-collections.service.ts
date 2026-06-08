@@ -3,7 +3,13 @@ import type {
   CollectionStatus,
   CopyFaqCollectionRequest,
   CreateFaqCollectionRequest,
+  FaqCollectionAnswerDetail,
+  FaqCollectionDetail,
+  FaqCollectionExportRow,
   FaqCollectionPublic,
+  FaqCollectionQuestionDetail,
+  FaqCollectionSubTopicDetail,
+  FaqCollectionTopicDetail,
   UpdateFaqCollectionRequest,
 } from "@app-types/faq";
 import { createFaqCollectionSchema, updateFaqCollectionSchema } from "@schemas/faq";
@@ -19,6 +25,59 @@ const collectionPublicSchema = z.object({
   published_by: z.string().uuid().nullable().optional(),
   published_at: z.union([z.string(), z.date()]).nullable().optional(),
 });
+
+type FaqCollectionDetailRow = {
+  collection_id: string;
+  collection_name: string;
+  collection_description: string | null;
+  admission_year: number;
+  collection_status: CollectionStatus;
+  published_by: string | null;
+  published_at: Date | string | null;
+  topic_id: string;
+  topic_code: string;
+  topic_name: string;
+  topic_sort_order: number;
+  sub_topic_id: string;
+  sub_topic_code: string;
+  sub_topic_name: string;
+  sub_topic_sort_order: number;
+  question_id: string;
+  question_code: string;
+  question_content: string;
+  question_status: "new" | "approved" | "rejected" | "deleted";
+  question_sort_order: number;
+  answer_id: string | null;
+  answer_content: string | null;
+  answer_status: "new" | "approved" | "rejected" | "deleted" | null;
+  answer_version: number | null;
+  tags: string[] | string | null;
+  keywords: string[] | string | null;
+  synonyms: string[] | string | null;
+  campus_ids: string[] | string | null;
+  campus_codes: string[] | string | null;
+  campus_names: string[] | string | null;
+  applies_to_all_campuses: boolean | null;
+};
+
+type FaqCollectionExportDbRow = {
+  question: string;
+  answer: string | null;
+  admission_year: number;
+  campus: string | null;
+  question_sort_order: number;
+  answer_created_at: Date | string | null;
+};
+
+function parsePgArray(val: unknown): string[] {
+  if (Array.isArray(val)) return val.map(String);
+  if (typeof val !== "string" || !val || val === "{}") return [];
+  return val
+    .replace(/^{|}$/g, "")
+    .split(",")
+    .filter(Boolean)
+    .map((s) => s.trim().replace(/^"|"$/g, ""));
+}
 
 export class FaqCollectionsService extends BaseService<FaqCollectionPublic, CreateFaqCollectionRequest, UpdateFaqCollectionRequest> {
   protected readonly tableName = "faq_collections";
@@ -49,6 +108,100 @@ export class FaqCollectionsService extends BaseService<FaqCollectionPublic, Crea
   async findById(id: string): Promise<FaqCollectionPublic | null> {
     const [row] = await db`SELECT * FROM get_faq_collection_by_id(${id})`;
     return row ? this.parseOne(row) : null;
+  }
+
+  async findDetailById(id: string): Promise<FaqCollectionDetail | null> {
+    const rows = (await db`
+      SELECT
+        c.id AS collection_id,
+        c.name AS collection_name,
+        c.description AS collection_description,
+        c.admission_year,
+        c.status AS collection_status,
+        c.published_by,
+        c.published_at,
+        t.id AS topic_id,
+        t.code AS topic_code,
+        t.name AS topic_name,
+        t.sort_order AS topic_sort_order,
+        s.id AS sub_topic_id,
+        s.code AS sub_topic_code,
+        s.name AS sub_topic_name,
+        s.sort_order AS sub_topic_sort_order,
+        q.id AS question_id,
+        q.code AS question_code,
+        q.content AS question_content,
+        q.status AS question_status,
+        ci.sort_order AS question_sort_order,
+        a.id AS answer_id,
+        a.content AS answer_content,
+        a.status AS answer_status,
+        a.version AS answer_version,
+        a.tags,
+        a.keywords,
+        a.synonyms,
+        COALESCE(ARRAY_AGG(campus.id::text ORDER BY campus.name) FILTER (WHERE campus.id IS NOT NULL), ARRAY[]::text[]) AS campus_ids,
+        COALESCE(ARRAY_AGG(campus.code ORDER BY campus.name) FILTER (WHERE campus.id IS NOT NULL), ARRAY[]::varchar[]) AS campus_codes,
+        COALESCE(ARRAY_AGG(campus.name ORDER BY campus.name) FILTER (WHERE campus.id IS NOT NULL), ARRAY[]::varchar[]) AS campus_names,
+        (a.id IS NOT NULL AND COUNT(fac.campus_id) = 0) AS applies_to_all_campuses
+      FROM faq_collections c
+      JOIN faq_collection_items ci ON ci.collection_id = c.id
+      JOIN faq_questions q ON q.id = ci.question_id AND q.is_active = true
+      JOIN faq_sub_topics s ON s.id = q.sub_topic_id AND s.is_active = true
+      JOIN faq_topics t ON t.id = s.topic_id AND t.is_active = true
+      LEFT JOIN faq_answers a ON a.question_id = q.id AND a.is_active = true
+      LEFT JOIN faq_answer_campuses fac ON fac.answer_id = a.id
+      LEFT JOIN campuses campus ON campus.id = fac.campus_id
+      WHERE c.id = ${id}
+        AND c.is_active = true
+      GROUP BY c.id, t.id, s.id, q.id, ci.sort_order, a.id
+      ORDER BY t.sort_order ASC, t.name ASC,
+        s.sort_order ASC, s.name ASC,
+        ci.sort_order ASC, q.created_at ASC,
+        a.created_at ASC
+    `) as FaqCollectionDetailRow[];
+
+    if (rows.length === 0) {
+      const collection = await this.findById(id);
+      return collection ? { ...collection, topics: [] } : null;
+    }
+
+    return this.buildCollectionDetail(rows);
+  }
+
+  async getExportRows(id: string): Promise<FaqCollectionExportRow[] | null> {
+    const collection = await this.findById(id);
+    if (!collection) return null;
+
+    const rows = (await db`
+      SELECT
+        q.content AS question,
+        a.content AS answer,
+        c.admission_year,
+        CASE
+          WHEN a.id IS NULL THEN NULL
+          WHEN fac.campus_id IS NULL THEN 'Tất cả cơ sở'
+          ELSE campus.name
+        END AS campus,
+        ci.sort_order AS question_sort_order,
+        a.created_at AS answer_created_at
+      FROM faq_collections c
+      JOIN faq_collection_items ci ON ci.collection_id = c.id
+      JOIN faq_questions q ON q.id = ci.question_id AND q.is_active = true
+      LEFT JOIN faq_answers a ON a.question_id = q.id AND a.is_active = true
+      LEFT JOIN faq_answer_campuses fac ON fac.answer_id = a.id
+      LEFT JOIN campuses campus ON campus.id = fac.campus_id
+      WHERE c.id = ${id}
+        AND c.is_active = true
+      ORDER BY ci.sort_order ASC, q.created_at ASC, a.created_at ASC, campus.name ASC
+    `) as FaqCollectionExportDbRow[];
+
+    return rows.map((row) => ({
+      question: row.question,
+      answer: row.answer ?? "",
+      admission_year: row.admission_year,
+      campus: row.campus ?? "",
+    }));
   }
 
   async create(data: CreateFaqCollectionRequest): Promise<FaqCollectionPublic> {
@@ -104,5 +257,81 @@ export class FaqCollectionsService extends BaseService<FaqCollectionPublic, Crea
 
   async delete(id: string): Promise<void> {
     await db`SELECT delete_faq_collection(${id})`;
+  }
+
+  private buildCollectionDetail(rows: FaqCollectionDetailRow[]): FaqCollectionDetail {
+    const first = rows[0]!;
+    const topics = new Map<string, FaqCollectionTopicDetail>();
+    const subTopics = new Map<string, FaqCollectionSubTopicDetail>();
+    const questions = new Map<string, FaqCollectionQuestionDetail>();
+
+    for (const row of rows) {
+      let topic = topics.get(row.topic_id);
+      if (!topic) {
+        topic = {
+          id: row.topic_id,
+          code: row.topic_code,
+          name: row.topic_name,
+          sort_order: row.topic_sort_order,
+          sub_topics: [],
+        };
+        topics.set(row.topic_id, topic);
+      }
+
+      let subTopic = subTopics.get(row.sub_topic_id);
+      if (!subTopic) {
+        subTopic = {
+          id: row.sub_topic_id,
+          code: row.sub_topic_code,
+          name: row.sub_topic_name,
+          sort_order: row.sub_topic_sort_order,
+          questions: [],
+        };
+        subTopics.set(row.sub_topic_id, subTopic);
+        topic.sub_topics.push(subTopic);
+      }
+
+      let question = questions.get(row.question_id);
+      if (!question) {
+        question = {
+          id: row.question_id,
+          code: row.question_code,
+          content: row.question_content,
+          status: row.question_status,
+          sort_order: row.question_sort_order,
+          answers: [],
+        };
+        questions.set(row.question_id, question);
+        subTopic.questions.push(question);
+      }
+
+      if (row.answer_id) {
+        const answer: FaqCollectionAnswerDetail = {
+          id: row.answer_id,
+          content: row.answer_content ?? "",
+          status: row.answer_status ?? "new",
+          applies_to_all_campuses: Boolean(row.applies_to_all_campuses),
+          campus_ids: parsePgArray(row.campus_ids),
+          campus_codes: parsePgArray(row.campus_codes),
+          campus_names: parsePgArray(row.campus_names),
+          tags: parsePgArray(row.tags),
+          keywords: parsePgArray(row.keywords),
+          synonyms: parsePgArray(row.synonyms),
+          version: row.answer_version ?? 1,
+        };
+        question.answers.push(answer);
+      }
+    }
+
+    return {
+      id: first.collection_id,
+      name: first.collection_name,
+      description: first.collection_description ?? undefined,
+      admission_year: first.admission_year,
+      status: first.collection_status,
+      published_by: first.published_by ?? undefined,
+      published_at: first.published_at ? new Date(first.published_at) : undefined,
+      topics: Array.from(topics.values()),
+    };
   }
 }

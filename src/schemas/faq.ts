@@ -230,6 +230,49 @@ export const faqCollectionPublicSchema = z.object({
   published_at: z.union([z.string(), z.date()]).nullable().optional(),
 });
 
+export const faqCollectionAnswerDetailSchema = z.object({
+  id: z.string().uuid(),
+  content: z.string(),
+  status: answerStatusEnum,
+  applies_to_all_campuses: z.boolean(),
+  campus_ids: z.array(z.string().uuid()),
+  campus_codes: z.array(z.string()),
+  campus_names: z.array(z.string()),
+  tags: z.array(z.string()).nullable().optional(),
+  keywords: z.array(z.string()).nullable().optional(),
+  synonyms: z.array(z.string()).nullable().optional(),
+  version: z.number().int(),
+});
+
+export const faqCollectionQuestionDetailSchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  content: z.string(),
+  status: questionStatusEnum,
+  sort_order: z.number().int(),
+  answers: z.array(faqCollectionAnswerDetailSchema),
+});
+
+export const faqCollectionSubTopicDetailSchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  name: z.string(),
+  sort_order: z.number().int(),
+  questions: z.array(faqCollectionQuestionDetailSchema),
+});
+
+export const faqCollectionTopicDetailSchema = z.object({
+  id: z.string().uuid(),
+  code: z.string(),
+  name: z.string(),
+  sort_order: z.number().int(),
+  sub_topics: z.array(faqCollectionSubTopicDetailSchema),
+});
+
+export const faqCollectionDetailSchema = faqCollectionPublicSchema.extend({
+  topics: z.array(faqCollectionTopicDetailSchema),
+});
+
 export const createFaqCollectionSchema = z.object({
   name: z.string().min(1).max(255),
   description: z.string().optional(),
@@ -266,6 +309,7 @@ export const faqCollectionsQuerySchema = paginationQuerySchema.extend({
 });
 
 export const faqCollectionResponseSchema = z.object({ data: faqCollectionPublicSchema });
+export const faqCollectionDetailResponseSchema = z.object({ data: faqCollectionDetailSchema });
 export const faqCollectionsResponseSchema = z.object({
   data: z.array(faqCollectionPublicSchema),
   meta: paginationMetaSchema,
