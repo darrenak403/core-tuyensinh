@@ -60,15 +60,6 @@ type FaqCollectionDetailRow = {
   applies_to_all_campuses: boolean | null;
 };
 
-type FaqCollectionExportDbRow = {
-  question: string;
-  answer: string | null;
-  admission_year: number;
-  campus: string | null;
-  question_sort_order: number;
-  answer_created_at: Date | string | null;
-};
-
 function parsePgArray(val: unknown): string[] {
   if (Array.isArray(val)) return val.map(String);
   if (typeof val !== "string" || !val || val === "{}") return [];
@@ -170,38 +161,9 @@ export class FaqCollectionsService extends BaseService<FaqCollectionPublic, Crea
   }
 
   async getExportRows(id: string): Promise<FaqCollectionExportRow[] | null> {
-    const collection = await this.findById(id);
-    if (!collection) return null;
-
-    const rows = (await db`
-      SELECT
-        q.content AS question,
-        a.content AS answer,
-        c.admission_year,
-        CASE
-          WHEN a.id IS NULL THEN NULL
-          WHEN fac.campus_id IS NULL THEN 'Tất cả cơ sở'
-          ELSE campus.name
-        END AS campus,
-        ci.sort_order AS question_sort_order,
-        a.created_at AS answer_created_at
-      FROM faq_collections c
-      JOIN faq_collection_items ci ON ci.collection_id = c.id
-      JOIN faq_questions q ON q.id = ci.question_id AND q.is_active = true
-      LEFT JOIN faq_answers a ON a.question_id = q.id AND a.is_active = true
-      LEFT JOIN faq_answer_campuses fac ON fac.answer_id = a.id
-      LEFT JOIN campuses campus ON campus.id = fac.campus_id
-      WHERE c.id = ${id}
-        AND c.is_active = true
-      ORDER BY ci.sort_order ASC, q.created_at ASC, a.created_at ASC, campus.name ASC
-    `) as FaqCollectionExportDbRow[];
-
-    return rows.map((row) => ({
-      question: row.question,
-      answer: row.answer ?? "",
-      admission_year: row.admission_year,
-      campus: row.campus ?? "",
-    }));
+    const detail = await this.findDetailById(id);
+    if (!detail) return null;
+    return this.buildExportRows(detail);
   }
 
   async create(data: CreateFaqCollectionRequest): Promise<FaqCollectionPublic> {
@@ -334,4 +296,67 @@ export class FaqCollectionsService extends BaseService<FaqCollectionPublic, Crea
       topics: Array.from(topics.values()),
     };
   }
+
+  private buildExportRows(detail: FaqCollectionDetail): FaqCollectionExportRow[] {
+    const rows: FaqCollectionExportRow[] = [];
+    let seq = 1;
+
+    for (const topic of detail.topics) {
+      for (const subTopic of topic.sub_topics) {
+        for (const question of subTopic.questions) {
+          const answers = question.answers.length > 0 ? question.answers : [null];
+
+          for (const answer of answers) {
+            const campusNames = getExportCampusNames(answer);
+            const campusCodes = getExportCampusCodes(answer);
+
+            for (let i = 0; i < campusNames.length; i += 1) {
+              const campusName = campusNames[i] ?? "Tất cả cơ sở";
+              const campusCode = campusCodes[i] ?? "ALL";
+
+              rows.push({
+                record_id: buildRecordId(detail.admission_year, campusCode, topic.code, seq),
+                main_topic: topic.name,
+                sub_topic: subTopic.name,
+                question: question.content,
+                question_aliases: answer?.synonyms ?? [],
+                answer: answer?.content ?? "",
+                admission_year: detail.admission_year,
+                campus: campusName,
+                question_status: question.status,
+                answer_status: answer?.status ?? "",
+              });
+              seq += 1;
+            }
+          }
+        }
+      }
+    }
+
+    return rows;
+  }
+}
+
+function buildRecordId(year: number, campusCode: string, topicCode: string, seq: number): string {
+  return `FAQ${year}${compactCode(campusCode)}${compactCode(topicCode)}${String(seq).padStart(3, "0")}`;
+}
+
+function compactCode(value: string): string {
+  return value.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+}
+
+function getExportCampusNames(answer: FaqCollectionAnswerDetail | null): string[] {
+  if (!answer) return [""];
+  if (!answer.applies_to_all_campuses && answer.campus_names.length > 0) {
+    return answer.campus_names;
+  }
+  return ["Tất cả cơ sở"];
+}
+
+function getExportCampusCodes(answer: FaqCollectionAnswerDetail | null): string[] {
+  if (!answer) return ["ALL"];
+  if (!answer.applies_to_all_campuses && answer.campus_codes.length > 0) {
+    return answer.campus_codes;
+  }
+  return ["ALL"];
 }

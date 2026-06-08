@@ -4,6 +4,8 @@ import {
   createFaqCollectionHandler,
   deleteFaqCollectionHandler,
   exportFaqCollectionCsvHandler,
+  exportFaqCollectionExcelHandler,
+  exportFaqCollectionMarkdownHandler,
   getFaqCollectionDetailHandler,
   getFaqCollectionHandler,
   getFaqCollectionsHandler,
@@ -75,11 +77,39 @@ const exportFaqCollectionCsvRoute = createRoute({
   path: "/api/v1/faq/collections/{id}/export.csv",
   middleware: [authMiddleware] as const,
   summary: "Export FAQ collection questions and answers as CSV",
-  description: "Exports columns: Cau hoi, Cau tra loi, Nam, Co so. CSV is UTF-8 BOM and can be opened by Excel.",
+  description: "Exports topic, sub-topic, question, aliases, answers with campus, year, campus, and approval statuses. CSV is UTF-8 BOM and can be opened by Excel.",
   tags: ["FAQ Collections"],
   request: { params: uuidParamSchema },
   responses: {
     200: { content: { "text/csv": { schema: z.string() } }, description: "CSV export for Excel" },
+    404: { content: { "application/json": { schema: faqErrorSchema } }, description: "Not found" },
+  },
+});
+
+const exportFaqCollectionExcelRoute = createRoute({
+  method: "get",
+  path: "/api/v1/faq/collections/{id}/export.xls",
+  middleware: [authMiddleware] as const,
+  summary: "Export FAQ collection as formatted Excel",
+  description: "Exports an Excel-compatible .xls file with title, column widths, styled header, wrapped text, and table borders.",
+  tags: ["FAQ Collections"],
+  request: { params: uuidParamSchema },
+  responses: {
+    200: { content: { "application/vnd.ms-excel": { schema: z.string() } }, description: "Formatted Excel export" },
+    404: { content: { "application/json": { schema: faqErrorSchema } }, description: "Not found" },
+  },
+});
+
+const exportFaqCollectionMarkdownRoute = createRoute({
+  method: "get",
+  path: "/api/v1/faq/collections/{id}/export.md",
+  middleware: [authMiddleware] as const,
+  summary: "Export FAQ collection as Markdown records",
+  description: "Exports one FAQ Record per question-answer-campus row using Record ID FAQ<YEAR><CAMPUS><TOPIC><SEQ>.",
+  tags: ["FAQ Collections"],
+  request: { params: uuidParamSchema },
+  responses: {
+    200: { content: { "text/markdown": { schema: z.string() } }, description: "Markdown export" },
     404: { content: { "application/json": { schema: faqErrorSchema } }, description: "Not found" },
   },
 });
@@ -194,6 +224,8 @@ app.openapi(getFaqCollectionsRoute, getFaqCollectionsHandler);
 app.openapi(getFaqCollectionRoute, getFaqCollectionHandler);
 app.openapi(getFaqCollectionDetailRoute, getFaqCollectionDetailHandler);
 app.openapi(exportFaqCollectionCsvRoute, exportFaqCollectionCsvHandler);
+app.openapi(exportFaqCollectionExcelRoute, exportFaqCollectionExcelHandler);
+app.openapi(exportFaqCollectionMarkdownRoute, exportFaqCollectionMarkdownHandler);
 app.openapi(createFaqCollectionRoute, createFaqCollectionHandler);
 app.openapi(updateFaqCollectionRoute, updateFaqCollectionHandler);
 app.openapi(transitionFaqCollectionStatusRoute, transitionFaqCollectionStatusHandler);

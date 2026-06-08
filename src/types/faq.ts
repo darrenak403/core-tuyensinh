@@ -189,10 +189,16 @@ export interface FaqCollectionDetail extends FaqCollectionPublic {
 }
 
 export interface FaqCollectionExportRow {
+  record_id: string;
+  main_topic: string;
+  sub_topic: string;
   question: string;
+  question_aliases: string[];
   answer: string;
   admission_year: number;
   campus: string;
+  question_status: QuestionStatus;
+  answer_status: AnswerStatus | "";
 }
 
 export interface FaqSearchResult {
