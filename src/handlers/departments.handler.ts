@@ -2,6 +2,7 @@
  * Department handlers - Request handlers for department operations
  */
 
+import { parseAdmissionYearQuery } from "@schemas/admission-years";
 import { DepartmentsService } from "@services/departments.service";
 import type { Context } from "hono";
 
@@ -11,8 +12,9 @@ const departmentsService = new DepartmentsService();
 export const getDepartmentsHandler = async (c: Context) => {
   const limit = Number(c.req.query("limit")) || 100;
   const offset = Number(c.req.query("offset")) || 0;
+  const admissionYear = parseAdmissionYearQuery(c.req.query("admission_year"));
 
-  const result = await departmentsService.findAll(limit, offset);
+  const result = await departmentsService.findAll(limit, offset, admissionYear);
   return c.json(result, 200);
 };
 

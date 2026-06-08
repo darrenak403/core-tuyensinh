@@ -9,6 +9,7 @@ export interface Program {
   name_en?: string;
   department_id: string;
   duration_years: number;
+  admission_year?: number;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
@@ -21,6 +22,7 @@ export interface ProgramWithDepartment {
   name_en?: string;
   department_id: string;
   duration_years: number;
+  admission_year?: number;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
@@ -39,6 +41,7 @@ export interface ProgramPublic {
   name_en?: string;
   department_id: string;
   duration_years: number;
+  admission_year?: number;
   department: {
     id: string;
     code: string;
@@ -53,6 +56,7 @@ export interface CreateProgramRequest {
   name_en?: string;
   department_id: string;
   duration_years: number;
+  admission_year?: number;
 }
 
 export interface UpdateProgramRequest {
@@ -61,6 +65,7 @@ export interface UpdateProgramRequest {
   name_en?: string;
   department_id?: string;
   duration_years?: number;
+  admission_year?: number;
   is_active?: boolean;
 }
 

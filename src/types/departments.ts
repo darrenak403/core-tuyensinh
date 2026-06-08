@@ -8,6 +8,7 @@ export interface Department {
   name: string;
   name_en?: string;
   description?: string;
+  admission_year?: number;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
@@ -19,6 +20,7 @@ export interface DepartmentPublic {
   name: string;
   name_en?: string;
   description?: string;
+  admission_year?: number;
 }
 
 export interface CreateDepartmentRequest {
@@ -26,6 +28,7 @@ export interface CreateDepartmentRequest {
   name: string;
   name_en?: string;
   description?: string;
+  admission_year?: number;
 }
 
 export interface UpdateDepartmentRequest {
@@ -33,6 +36,7 @@ export interface UpdateDepartmentRequest {
   name?: string;
   name_en?: string;
   description?: string;
+  admission_year?: number;
   is_active?: boolean;
 }
 

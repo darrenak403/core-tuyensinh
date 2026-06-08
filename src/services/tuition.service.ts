@@ -24,6 +24,7 @@ import {
   tuitionSummarySchema,
   updateTuitionSchema,
 } from "@schemas/tuition";
+import { AdmissionYearsService } from "@services/admission-years.service";
 import { z } from "zod";
 import { BaseService, type PaginatedResponse } from "./base.service";
 
@@ -180,7 +181,13 @@ export class TuitionService extends BaseService<
    * Create new tuition record using validation function
    */
   async create(data: CreateTuitionRequest): Promise<TuitionSummary> {
-    const validatedData = this.createSchema.parse(data);
+    const validatedData = this.createSchema.parse(data) as any;
+    validatedData.year = validatedData.year ?? validatedData.admission_year;
+    validatedData.admission_year = undefined;
+    if (validatedData.year === undefined) {
+      throw new Error("admission_year là bắt buộc");
+    }
+    await new AdmissionYearsService().ensureActive(validatedData.year);
 
     return db.begin(async (tx) => {
       // 1. Validate program exists and is active
@@ -241,7 +248,12 @@ export class TuitionService extends BaseService<
     id: string,
     data: UpdateTuitionRequest
   ): Promise<TuitionSummary> {
-    const validatedData = this.updateSchema.parse(data);
+    const validatedData = this.updateSchema.parse(data) as any;
+    validatedData.year = validatedData.year ?? validatedData.admission_year;
+    validatedData.admission_year = undefined;
+    if (validatedData.year !== undefined) {
+      await new AdmissionYearsService().ensureActive(validatedData.year);
+    }
 
     // Prevent updating with an empty object
     if (Object.keys(validatedData).length === 0) {

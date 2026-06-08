@@ -11,6 +11,7 @@ export const departmentSchema = z.object({
   name: z.string().min(1).max(100),
   name_en: z.string().max(100).optional(),
   description: z.string().optional(),
+  admission_year: z.number().int().optional(),
 });
 
 // Public department response schema
@@ -20,6 +21,7 @@ export const departmentPublicSchema = departmentSchema.pick({
   name: true,
   name_en: true,
   description: true,
+  admission_year: true,
 });
 
 // Create department request schema
@@ -37,6 +39,10 @@ export const createDepartmentSchema = z.object({
     .max(100, "English name must be at most 100 characters")
     .optional(),
   description: z.string().optional(),
+  admission_year: z.coerce
+    .number()
+    .int("admission_year phải là số nguyên")
+    .optional(),
 });
 
 // Update department request schema
@@ -45,6 +51,10 @@ export const updateDepartmentSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   name_en: z.string().max(100).optional(),
   description: z.string().optional(),
+  admission_year: z.coerce
+    .number()
+    .int("admission_year phải là số nguyên")
+    .optional(),
   is_active: z.boolean().optional(),
 });
 
@@ -61,6 +71,10 @@ export const paginationMetaSchema = z.object({
 export const departmentsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(100).optional(),
   offset: z.coerce.number().int().min(0).default(0).optional(),
+  admission_year: z.coerce
+    .number()
+    .int("admission_year phải là số nguyên")
+    .optional(),
 });
 
 // Response schemas

@@ -20,6 +20,7 @@ export const programSchema = z.object({
   name_en: z.string().max(255).optional(),
   department_id: z.string().uuid(),
   duration_years: z.number().int().min(1).max(6),
+  admission_year: z.number().int().optional(),
 });
 
 // Public program response schema (with department info)
@@ -31,6 +32,7 @@ export const programPublicSchema = programSchema
     name_en: true,
     department_id: true,
     duration_years: true,
+    admission_year: true,
   })
   .extend({
     department: departmentInfoSchema,
@@ -56,6 +58,10 @@ export const createProgramSchema = z.object({
     .int("Duration must be a whole number")
     .min(1, "Duration must be at least 1 year")
     .max(6, "Duration must be at most 6 years"),
+  admission_year: z.coerce
+    .number()
+    .int("admission_year phải là số nguyên")
+    .optional(),
 });
 
 // Update program request schema
@@ -65,6 +71,10 @@ export const updateProgramSchema = z.object({
   name_en: z.string().max(255).optional(),
   department_id: z.string().uuid().optional(),
   duration_years: z.number().int().min(1).max(6).optional(),
+  admission_year: z.coerce
+    .number()
+    .int("admission_year phải là số nguyên")
+    .optional(),
   is_active: z.boolean().optional(),
 });
 
@@ -82,6 +92,10 @@ export const programsQuerySchema = z.object({
   department_code: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(100).optional(),
   offset: z.coerce.number().int().min(0).default(0).optional(),
+  admission_year: z.coerce
+    .number()
+    .int("admission_year phải là số nguyên")
+    .optional(),
 });
 
 // Response schemas

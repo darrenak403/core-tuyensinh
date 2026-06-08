@@ -10,6 +10,7 @@ import type {
   UpdateProgramRequest,
 } from "@app-types/programs";
 import { db } from "@config/database";
+import { AdmissionYearsService } from "@services/admission-years.service";
 import { z } from "zod";
 import {
   BaseService,
@@ -34,6 +35,11 @@ export class ProgramsService extends BaseService<
       name_en: commonSchemas.optionalString,
       department_id: commonSchemas.uuid,
       duration_years: z.number(),
+      admission_year: z
+        .number()
+        .nullable()
+        .optional()
+        .transform((val) => val ?? undefined),
       dept_id: commonSchemas.uuid,
       dept_code: z.string(),
       dept_name: z.string(),
@@ -47,6 +53,7 @@ export class ProgramsService extends BaseService<
         name_en: row.name_en,
         department_id: row.department_id,
         duration_years: row.duration_years,
+        admission_year: row.admission_year,
         department: {
           id: row.dept_id,
           code: row.dept_code,
@@ -62,6 +69,7 @@ export class ProgramsService extends BaseService<
     name_en: z.string().optional(),
     department_id: z.string().uuid(),
     duration_years: z.number(),
+    admission_year: z.number().optional(),
   });
 
   protected readonly updateSchema = z.object({
@@ -70,24 +78,39 @@ export class ProgramsService extends BaseService<
     name_en: z.string().optional(),
     department_id: z.string().uuid().optional(),
     duration_years: z.number().optional(),
+    admission_year: z.number().optional(),
     is_active: z.boolean().optional(),
   });
 
   async findAll(
     departmentCode?: string,
     limit = 100,
-    offset = 0
+    offset = 0,
+    admissionYear?: number
   ): Promise<PaginatedResponse<ProgramPublic>> {
     const [dataRows, countRows] = await Promise.all([
       db`
-        SELECT * FROM get_programs_with_department(
-          ${departmentCode},
-          ${limit},
-          ${offset}
-        )
+        SELECT
+          p.id, p.code, p.name, p.name_en, p.department_id, p.duration_years, p.admission_year,
+          d.id as dept_id, d.code as dept_code, d.name as dept_name, d.name_en as dept_name_en
+        FROM programs p
+        INNER JOIN departments d ON p.department_id = d.id
+        WHERE p.is_active = true
+          AND d.is_active = true
+          AND (${departmentCode ?? null}::varchar IS NULL OR d.code = ${departmentCode ?? null})
+          AND (${admissionYear ?? null}::integer IS NULL OR p.admission_year = ${admissionYear ?? null})
+        ORDER BY p.name
+        LIMIT ${limit}
+        OFFSET ${offset}
       `,
       db`
-        SELECT get_programs_count(${departmentCode}) as total
+        SELECT COUNT(*)::int as total
+        FROM programs p
+        INNER JOIN departments d ON p.department_id = d.id
+        WHERE p.is_active = true
+          AND d.is_active = true
+          AND (${departmentCode ?? null}::varchar IS NULL OR d.code = ${departmentCode ?? null})
+          AND (${admissionYear ?? null}::integer IS NULL OR p.admission_year = ${admissionYear ?? null})
       `,
     ]);
 
@@ -99,7 +122,14 @@ export class ProgramsService extends BaseService<
 
   async findById(id: string): Promise<ProgramPublic | null> {
     const [program] = await db`
-      SELECT * FROM get_program_by_id_with_department(${id})
+      SELECT
+        p.id, p.code, p.name, p.name_en, p.department_id, p.duration_years, p.admission_year,
+        d.id as dept_id, d.code as dept_code, d.name as dept_name, d.name_en as dept_name_en
+      FROM programs p
+      INNER JOIN departments d ON p.department_id = d.id
+      WHERE p.id = ${id}
+        AND p.is_active = true
+        AND d.is_active = true
     `;
 
     if (!program) return null;
@@ -122,30 +152,45 @@ export class ProgramsService extends BaseService<
   }
 
   async create(data: CreateProgramRequest): Promise<ProgramPublic> {
+    if (data.admission_year !== undefined) {
+      await new AdmissionYearsService().ensureActive(data.admission_year);
+    }
     const [program] = await db`
-      SELECT * FROM create_program_with_validation(
-        ${data.code},
-        ${data.name},
-        ${data.department_id},
-        ${data.duration_years},
-        ${data.name_en}
-      )
+      INSERT INTO programs (code, name, name_en, department_id, duration_years, admission_year)
+      VALUES (${data.code}, ${data.name}, ${data.name_en}, ${data.department_id}, ${data.duration_years}, ${data.admission_year})
+      RETURNING
+        id, code, name, name_en, department_id, duration_years, admission_year,
+        (SELECT id FROM departments WHERE id = ${data.department_id}) as dept_id,
+        (SELECT code FROM departments WHERE id = ${data.department_id}) as dept_code,
+        (SELECT name FROM departments WHERE id = ${data.department_id}) as dept_name,
+        (SELECT name_en FROM departments WHERE id = ${data.department_id}) as dept_name_en
     `;
 
     return this.parseOne(program);
   }
 
   async update(id: string, data: UpdateProgramRequest): Promise<ProgramPublic> {
+    if (data.admission_year !== undefined) {
+      await new AdmissionYearsService().ensureActive(data.admission_year);
+    }
     const [program] = await db`
-      SELECT * FROM update_program_with_validation(
-        ${id},
-        ${data.code},
-        ${data.name},
-        ${data.name_en},
-        ${data.department_id},
-        ${data.duration_years},
-        ${data.is_active}
-      )
+      UPDATE programs
+      SET
+        code = COALESCE(${data.code}, code),
+        name = COALESCE(${data.name}, name),
+        name_en = COALESCE(${data.name_en}, name_en),
+        department_id = COALESCE(${data.department_id}, department_id),
+        duration_years = COALESCE(${data.duration_years}, duration_years),
+        admission_year = COALESCE(${data.admission_year}, admission_year),
+        is_active = COALESCE(${data.is_active}, is_active),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${id} AND is_active = true
+      RETURNING
+        id, code, name, name_en, department_id, duration_years, admission_year,
+        (SELECT id FROM departments WHERE id = programs.department_id) as dept_id,
+        (SELECT code FROM departments WHERE id = programs.department_id) as dept_code,
+        (SELECT name FROM departments WHERE id = programs.department_id) as dept_name,
+        (SELECT name_en FROM departments WHERE id = programs.department_id) as dept_name_en
     `;
 
     return this.parseOne(program);

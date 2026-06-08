@@ -2,6 +2,7 @@
  * Admission Method handlers - Request handlers for admission method operations
  */
 
+import { parseAdmissionYearQuery } from "@schemas/admission-years";
 import { AdmissionMethodsService } from "@services/admission-methods.service";
 import type { Context } from "hono";
 
@@ -12,7 +13,9 @@ const admissionMethodsService = new AdmissionMethodsService();
  * Get all admission methods handler
  */
 export const getAdmissionMethodsHandler = async (c: Context) => {
-  const year = Number(c.req.query("year")) || 2025;
+  const year = parseAdmissionYearQuery(
+    c.req.query("admission_year") ?? c.req.query("year")
+  );
   const limit = Number(c.req.query("limit")) || 50;
   const offset = Number(c.req.query("offset")) || 0;
 
@@ -50,6 +53,9 @@ export const getAdmissionMethodByIdHandler = async (c: Context) => {
  */
 export const createAdmissionMethodHandler = async (c: Context) => {
   const data = await c.req.json();
+  if (data.admission_year !== undefined && data.year === undefined) {
+    data.year = data.admission_year;
+  }
 
   try {
     const method = await admissionMethodsService.create(data);
@@ -80,6 +86,9 @@ export const createAdmissionMethodHandler = async (c: Context) => {
 export const updateAdmissionMethodHandler = async (c: Context) => {
   const id = c.req.param("id");
   const data = await c.req.json();
+  if (data.admission_year !== undefined && data.year === undefined) {
+    data.year = data.admission_year;
+  }
 
   try {
     const method = await admissionMethodsService.update(id, data);

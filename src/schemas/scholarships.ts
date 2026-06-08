@@ -37,16 +37,21 @@ export const scholarshipPublicSchema = scholarshipSchema.pick({
 });
 
 // Schema for creating a new scholarship
-export const createScholarshipSchema = scholarshipSchema.pick({
-  code: true,
-  name: true,
-  type: true,
-  recipients: true,
-  percentage: true,
-  requirements: true,
-  year: true,
-  notes: true,
-});
+export const createScholarshipSchema = scholarshipSchema
+  .pick({
+    code: true,
+    name: true,
+    type: true,
+    recipients: true,
+    percentage: true,
+    requirements: true,
+    year: true,
+    notes: true,
+  })
+  .extend({
+    year: z.coerce.number().int().min(2020).max(2030).optional(),
+    admission_year: z.coerce.number().int().min(2020).max(2030).optional(),
+  });
 
 // Schema for updating an existing scholarship
 export const updateScholarshipSchema = scholarshipSchema
@@ -61,11 +66,18 @@ export const updateScholarshipSchema = scholarshipSchema
     notes: true,
     is_active: true,
   })
-  .partial();
+  .partial()
+  .extend({
+    admission_year: z.coerce.number().int().min(2020).max(2030).optional(),
+  });
 
 // Schema for query parameters
 export const scholarshipQuerySchema = z.object({
   year: z.coerce.number().int().min(2020).max(2030).optional(),
+  admission_year: z.coerce
+    .number()
+    .int("admission_year phải là số nguyên")
+    .optional(),
   type: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),

@@ -29,13 +29,18 @@ export const admissionMethodPublicSchema = admissionMethodSchema.pick({
 });
 
 // Schema for creating a new admission method
-export const createAdmissionMethodSchema = admissionMethodSchema.pick({
-  method_code: true,
-  name: true,
-  requirements: true,
-  notes: true,
-  year: true,
-});
+export const createAdmissionMethodSchema = admissionMethodSchema
+  .pick({
+    method_code: true,
+    name: true,
+    requirements: true,
+    notes: true,
+    year: true,
+  })
+  .extend({
+    year: z.coerce.number().int().min(2020).max(2030).optional(),
+    admission_year: z.coerce.number().int().min(2020).max(2030).optional(),
+  });
 
 // Schema for updating an existing admission method
 export const updateAdmissionMethodSchema = admissionMethodSchema
@@ -47,11 +52,18 @@ export const updateAdmissionMethodSchema = admissionMethodSchema
     year: true,
     is_active: true,
   })
-  .partial();
+  .partial()
+  .extend({
+    admission_year: z.coerce.number().int().min(2020).max(2030).optional(),
+  });
 
 // Schema for query parameters
 export const admissionMethodQuerySchema = z.object({
   year: z.coerce.number().int().min(2020).max(2030).optional(),
+  admission_year: z.coerce
+    .number()
+    .int("admission_year phải là số nguyên")
+    .optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });

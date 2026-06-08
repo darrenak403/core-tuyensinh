@@ -118,6 +118,10 @@ export const tuitionQuerySchema = z.object({
   program_code: z.string().optional(),
   campus_code: z.string().optional(),
   year: z.coerce.number().int().min(2020).max(2030).default(2025),
+  admission_year: z.coerce
+    .number()
+    .int("admission_year phải là số nguyên")
+    .optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -127,23 +131,36 @@ export const tuitionCalculateSchema = z.object({
   campus_code: z.string().min(1, "Campus code is required"),
   has_ielts: z.coerce.boolean().default(false),
   year: z.coerce.number().int().min(2020).max(2030).default(2025),
+  admission_year: z.coerce
+    .number()
+    .int("admission_year phải là số nguyên")
+    .optional(),
 });
 
 export const tuitionComparisonQuerySchema = z.object({
   program_code: z.string().optional(),
   year: z.coerce.number().int().min(2020).max(2030).default(2025),
+  admission_year: z.coerce
+    .number()
+    .int("admission_year phải là số nguyên")
+    .optional(),
 });
 
 export const campusTuitionQuerySchema = z.object({
   campus_code: z.string().min(1, "Campus code is required"),
   year: z.coerce.number().int().min(2020).max(2030).default(2025),
+  admission_year: z.coerce
+    .number()
+    .int("admission_year phải là số nguyên")
+    .optional(),
 });
 
 // Request schemas
 export const createTuitionSchema = z.object({
   program_id: z.string().uuid("Invalid program ID format"),
   campus_id: z.string().uuid("Invalid campus ID format"),
-  year: z.number().int().min(2020).max(2030),
+  year: z.number().int().min(2020).max(2030).optional(),
+  admission_year: z.coerce.number().int().min(2020).max(2030).optional(),
   semester_group_1_3_fee: z
     .number()
     .positive("Semester 1-3 fee must be positive"),
@@ -159,6 +176,7 @@ export const updateTuitionSchema = z.object({
   program_id: z.string().uuid().optional(),
   campus_id: z.string().uuid().optional(),
   year: z.number().int().min(2020).max(2030).optional(),
+  admission_year: z.coerce.number().int().min(2020).max(2030).optional(),
   semester_group_1_3_fee: z.number().positive().optional(),
   semester_group_4_6_fee: z.number().positive().optional(),
   semester_group_7_9_fee: z.number().positive().optional(),

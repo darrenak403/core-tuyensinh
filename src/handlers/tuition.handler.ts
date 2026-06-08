@@ -3,11 +3,17 @@
  */
 
 import { db } from "@config/database";
+import { parseAdmissionYearQuery } from "@schemas/admission-years";
 import { TuitionService } from "@services/tuition.service";
 import type { Context } from "hono";
 
 // Create service instance
 const tuitionService = new TuitionService();
+
+const getYearFilter = (c: Context) =>
+  parseAdmissionYearQuery(
+    c.req.query("admission_year") ?? c.req.query("year")
+  ) ?? 2025;
 
 /**
  * Get all tuition fees handler
@@ -15,7 +21,7 @@ const tuitionService = new TuitionService();
 export const getTuitionHandler = async (c: Context) => {
   const program_code = c.req.query("program_code");
   const campus_code = c.req.query("campus_code");
-  const year = Number(c.req.query("year")) || 2025;
+  const year = getYearFilter(c);
   const limit = Number(c.req.query("limit")) || 50;
   const offset = Number(c.req.query("offset")) || 0;
 
@@ -55,7 +61,7 @@ export const getTuitionByIdHandler = async (c: Context) => {
  */
 export const getTuitionComparisonHandler = async (c: Context) => {
   const program_code = c.req.query("program_code");
-  const year = Number(c.req.query("year")) || 2025;
+  const year = getYearFilter(c);
 
   const data = await tuitionService.getComparison({
     program_code,
@@ -70,7 +76,7 @@ export const getTuitionComparisonHandler = async (c: Context) => {
  */
 export const getCampusTuitionHandler = async (c: Context) => {
   const campus_code = c.req.param("campus_code");
-  const year = Number(c.req.query("year")) || 2025;
+  const year = getYearFilter(c);
 
   const data = await tuitionService.getCampusSummary({
     campus_code,
@@ -97,7 +103,7 @@ export const calculateTuitionCostHandler = async (c: Context) => {
   const program_code = c.req.query("program_code");
   const campus_code = c.req.query("campus_code");
   const has_ielts = c.req.query("has_ielts") === "true";
-  const year = Number(c.req.query("year")) || 2025;
+  const year = getYearFilter(c);
 
   if (!program_code || !campus_code) {
     return c.json(
@@ -135,7 +141,7 @@ export const calculateTuitionCostHandler = async (c: Context) => {
 export const getTuitionWithFiltersHandler = async (c: Context) => {
   const program_codes = c.req.query("program_codes")?.split(",");
   const campus_codes = c.req.query("campus_codes")?.split(",");
-  const year = Number(c.req.query("year")) || 2025;
+  const year = getYearFilter(c);
   const include_inactive = c.req.query("include_inactive") === "true";
 
   const data = await tuitionService.findWithFilters(
@@ -153,6 +159,9 @@ export const getTuitionWithFiltersHandler = async (c: Context) => {
  */
 export const createTuitionHandler = async (c: Context) => {
   const data = await c.req.json();
+  if (data.admission_year !== undefined && data.year === undefined) {
+    data.year = data.admission_year;
+  }
 
   try {
     const tuition = await tuitionService.create(data);
@@ -184,6 +193,9 @@ export const createTuitionHandler = async (c: Context) => {
 export const updateTuitionHandler = async (c: Context) => {
   const id = c.req.param("id");
   const data = await c.req.json();
+  if (data.admission_year !== undefined && data.year === undefined) {
+    data.year = data.admission_year;
+  }
 
   try {
     const tuition = await tuitionService.update(id, data);
@@ -224,7 +236,7 @@ export const deleteTuitionHandler = async (c: Context) => {
  * Get tuition summary handler (for analytics/overview)
  */
 export const getTuitionSummaryHandler = async (c: Context) => {
-  const year = Number(c.req.query("year")) || 2025;
+  const year = getYearFilter(c);
 
   const [stats] = await db`
     SELECT 

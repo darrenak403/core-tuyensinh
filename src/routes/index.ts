@@ -1,5 +1,6 @@
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import admissionMethodsRoutes from "@routes/admission-methods";
+import admissionYearsRoutes from "@routes/admission-years";
 import authRoutes from "@routes/auth/auth";
 import campusesRoutes from "@routes/campuses";
 import dashboardRoutes from "@routes/dashboard";
@@ -49,6 +50,9 @@ export function setupRoutes(app: OpenAPIHono) {
 
   // Admission Methods routes
   app.route("/", admissionMethodsRoutes);
+
+  // Admission Years routes
+  app.route("/", admissionYearsRoutes);
 
   // Users routes
   app.route("/", usersRoutes);

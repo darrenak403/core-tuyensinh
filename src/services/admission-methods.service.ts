@@ -14,6 +14,7 @@ import {
   createAdmissionMethodSchema,
   updateAdmissionMethodSchema,
 } from "@schemas/admission-methods";
+import { AdmissionYearsService } from "@services/admission-years.service";
 import { BaseService, type PaginatedResponse } from "./base.service";
 
 export class AdmissionMethodsService extends BaseService<
@@ -36,18 +37,18 @@ export class AdmissionMethodsService extends BaseService<
   async findAll(
     params: AdmissionMethodQueryParams = {}
   ): Promise<PaginatedResponse<AdmissionMethod>> {
-    const { year = 2025, limit = 50, offset = 0 } = params;
+    const { year, limit = 50, offset = 0 } = params;
 
     const [dataRows, countRows] = await Promise.all([
       db`
         SELECT * FROM admission_methods
-        WHERE year = ${year}
+        WHERE (${year ?? null}::integer IS NULL OR year = ${year ?? null})
         ORDER BY name ASC
         LIMIT ${limit} OFFSET ${offset}
       `,
       db`
         SELECT COUNT(*) as total FROM admission_methods
-        WHERE year = ${year}
+        WHERE (${year ?? null}::integer IS NULL OR year = ${year ?? null})
       `,
     ]);
 
@@ -61,7 +62,13 @@ export class AdmissionMethodsService extends BaseService<
    * Create new admission method record
    */
   async create(data: CreateAdmissionMethodRequest): Promise<AdmissionMethod> {
-    const validatedData = this.createSchema.parse(data);
+    const validatedData = this.createSchema.parse(data) as any;
+    validatedData.year = validatedData.year ?? validatedData.admission_year;
+    validatedData.admission_year = undefined;
+    if (validatedData.year === undefined) {
+      throw new Error("admission_year là bắt buộc");
+    }
+    await new AdmissionYearsService().ensureActive(validatedData.year);
 
     const [existing] = await db`
       SELECT id FROM admission_methods WHERE method_code = ${validatedData.method_code} AND year = ${validatedData.year}
@@ -95,7 +102,12 @@ export class AdmissionMethodsService extends BaseService<
     id: string,
     data: UpdateAdmissionMethodRequest
   ): Promise<AdmissionMethod> {
-    const validatedData = this.updateSchema.parse(data);
+    const validatedData = this.updateSchema.parse(data) as any;
+    validatedData.year = validatedData.year ?? validatedData.admission_year;
+    validatedData.admission_year = undefined;
+    if (validatedData.year !== undefined) {
+      await new AdmissionYearsService().ensureActive(validatedData.year);
+    }
 
     if (Object.keys(validatedData).length === 0) {
       const currentMethod = await this.findById(id);

@@ -14,6 +14,7 @@ import {
   scholarshipPublicSchema,
   updateScholarshipSchema,
 } from "@schemas/scholarships";
+import { AdmissionYearsService } from "@services/admission-years.service";
 import { BaseService, type PaginatedResponse } from "./base.service";
 
 export class ScholarshipService extends BaseService<
@@ -36,20 +37,20 @@ export class ScholarshipService extends BaseService<
   async findAll(
     params: ScholarshipQueryParams = {}
   ): Promise<PaginatedResponse<Scholarship>> {
-    const { type, year = 2025, limit = 50, offset = 0 } = params;
+    const { type, year, limit = 50, offset = 0 } = params;
 
     const [dataRows, countRows] = await Promise.all([
       db`
         SELECT * FROM scholarships
         WHERE (${type}::text IS NULL OR type = ${type})
-          AND year = ${year}
+          AND (${year ?? null}::integer IS NULL OR year = ${year ?? null})
         ORDER BY name ASC
         LIMIT ${limit} OFFSET ${offset}
       `,
       db`
         SELECT COUNT(*) as total FROM scholarships
         WHERE (${type}::text IS NULL OR type = ${type})
-          AND year = ${year}
+          AND (${year ?? null}::integer IS NULL OR year = ${year ?? null})
       `,
     ]);
 
@@ -63,7 +64,13 @@ export class ScholarshipService extends BaseService<
    * Create new scholarship record
    */
   async create(data: CreateScholarshipRequest): Promise<Scholarship> {
-    const validatedData = this.createSchema.parse(data);
+    const validatedData = this.createSchema.parse(data) as any;
+    validatedData.year = validatedData.year ?? validatedData.admission_year;
+    validatedData.admission_year = undefined;
+    if (validatedData.year === undefined) {
+      throw new Error("admission_year là bắt buộc");
+    }
+    await new AdmissionYearsService().ensureActive(validatedData.year);
 
     const [existing] = await db`
       SELECT id FROM scholarships WHERE code = ${validatedData.code} AND year = ${validatedData.year}
@@ -100,7 +107,12 @@ export class ScholarshipService extends BaseService<
     id: string,
     data: UpdateScholarshipRequest
   ): Promise<Scholarship> {
-    const validatedData = this.updateSchema.parse(data);
+    const validatedData = this.updateSchema.parse(data) as any;
+    validatedData.year = validatedData.year ?? validatedData.admission_year;
+    validatedData.admission_year = undefined;
+    if (validatedData.year !== undefined) {
+      await new AdmissionYearsService().ensureActive(validatedData.year);
+    }
 
     if (Object.keys(validatedData).length === 0) {
       const currentScholarship = await this.findById(id);

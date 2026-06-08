@@ -2,6 +2,7 @@
  * Scholarship handlers - Request handlers for scholarship operations
  */
 
+import { parseAdmissionYearQuery } from "@schemas/admission-years";
 import { ScholarshipService } from "@services/scholarships.service";
 import type { Context } from "hono";
 
@@ -13,7 +14,9 @@ const scholarshipService = new ScholarshipService();
  */
 export const getScholarshipsHandler = async (c: Context) => {
   const type = c.req.query("type");
-  const year = Number(c.req.query("year")) || 2025;
+  const year = parseAdmissionYearQuery(
+    c.req.query("admission_year") ?? c.req.query("year")
+  );
   const limit = Number(c.req.query("limit")) || 50;
   const offset = Number(c.req.query("offset")) || 0;
 
@@ -52,6 +55,9 @@ export const getScholarshipByIdHandler = async (c: Context) => {
  */
 export const createScholarshipHandler = async (c: Context) => {
   const data = await c.req.json();
+  if (data.admission_year !== undefined && data.year === undefined) {
+    data.year = data.admission_year;
+  }
 
   try {
     const scholarship = await scholarshipService.create(data);
@@ -82,6 +88,9 @@ export const createScholarshipHandler = async (c: Context) => {
 export const updateScholarshipHandler = async (c: Context) => {
   const id = c.req.param("id");
   const data = await c.req.json();
+  if (data.admission_year !== undefined && data.year === undefined) {
+    data.year = data.admission_year;
+  }
 
   try {
     const scholarship = await scholarshipService.update(id, data);

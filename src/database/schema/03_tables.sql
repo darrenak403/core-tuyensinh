@@ -5,6 +5,14 @@
 
 -- CORE TABLES
 
+-- Admission years table
+CREATE TABLE admission_years (
+    year INTEGER PRIMARY KEY,
+    label VARCHAR(255) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Departments table
 CREATE TABLE departments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v8(),
@@ -12,6 +20,7 @@ CREATE TABLE departments (
     name VARCHAR(100) NOT NULL,
     name_en VARCHAR(100),
     description TEXT,
+    admission_year INTEGER REFERENCES admission_years(year),
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -25,6 +34,7 @@ CREATE TABLE programs (
     name_en VARCHAR(255),
     department_id UUID NOT NULL REFERENCES departments(id),
     duration_years INTEGER NOT NULL DEFAULT 4,
+    admission_year INTEGER REFERENCES admission_years(year),
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

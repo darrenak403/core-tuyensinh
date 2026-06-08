@@ -2,6 +2,7 @@
  * Program handlers - Request handlers for program operations
  */
 
+import { parseAdmissionYearQuery } from "@schemas/admission-years";
 import { ProgramsService } from "@services/programs.service";
 import type { Context } from "hono";
 
@@ -15,8 +16,14 @@ export const getProgramsHandler = async (c: Context) => {
   const departmentCode = c.req.query("department_code");
   const limit = Number(c.req.query("limit")) || 100;
   const offset = Number(c.req.query("offset")) || 0;
+  const admissionYear = parseAdmissionYearQuery(c.req.query("admission_year"));
 
-  const result = await programsService.findAll(departmentCode, limit, offset);
+  const result = await programsService.findAll(
+    departmentCode,
+    limit,
+    offset,
+    admissionYear
+  );
   return c.json(result, 200);
 };
 
