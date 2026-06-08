@@ -90,6 +90,29 @@ export const errorHandler = async (err: Error, c: Context) => {
     );
   }
 
+  if ("code" in err && err.code === "23505") {
+    logger.warn(
+      {
+        error: err.message,
+        code: err.code,
+        requestId,
+      },
+      "Unique constraint violation"
+    );
+
+    return c.json(
+      {
+        error: {
+          message: "Resource already exists",
+          code: "CONFLICT",
+          requestId,
+          timestamp: new Date().toISOString(),
+        },
+      },
+      409
+    );
+  }
+
   // Handle unknown errors
   logger.error(
     {

@@ -9,6 +9,7 @@ import type {
   DepartmentPublic,
   UpdateDepartmentRequest,
 } from "@app-types/departments";
+import { ConflictError } from "@app-types/errors";
 import { db } from "@config/database";
 import { AdmissionYearsService } from "@services/admission-years.service";
 import { z } from "zod";
@@ -114,6 +115,7 @@ export class DepartmentsService extends BaseService<
     if (data.admission_year !== undefined) {
       await new AdmissionYearsService().ensureActive(data.admission_year);
     }
+    await this.ensureCodeAvailable(data.code, data.admission_year);
     const [department] = await db`
       INSERT INTO departments (code, name, name_en, description, admission_year)
       VALUES (${data.code}, ${data.name}, ${data.name_en}, ${data.description}, ${data.admission_year})
@@ -130,18 +132,27 @@ export class DepartmentsService extends BaseService<
     if (data.admission_year !== undefined) {
       await new AdmissionYearsService().ensureActive(data.admission_year);
     }
+    if (data.code !== undefined || data.admission_year !== undefined) {
+      await this.ensureUpdatedCodeAvailable(id, data);
+    }
     const [department] = await db`
       UPDATE departments
       SET
-        code = COALESCE(${data.code}, code),
-        name = COALESCE(${data.name}, name),
-        name_en = COALESCE(${data.name_en}, name_en),
-        description = COALESCE(${data.description}, description),
-        admission_year = COALESCE(${data.admission_year}, admission_year),
-        is_active = COALESCE(${data.is_active}, is_active),
+        code = COALESCE(${data.code}, departments.code),
+        name = COALESCE(${data.name}, departments.name),
+        name_en = COALESCE(${data.name_en}, departments.name_en),
+        description = COALESCE(${data.description}, departments.description),
+        admission_year = COALESCE(${data.admission_year}, departments.admission_year),
+        is_active = COALESCE(${data.is_active}, departments.is_active),
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = ${id} AND is_active = true
-      RETURNING id, code, name, name_en, description, admission_year
+      WHERE departments.id = ${id} AND departments.is_active = true
+      RETURNING
+        departments.id,
+        departments.code,
+        departments.name,
+        departments.name_en,
+        departments.description,
+        departments.admission_year
     `;
 
     return this.parseOne(department);
@@ -151,5 +162,44 @@ export class DepartmentsService extends BaseService<
     await db`
       SELECT delete_department_with_validation(${id})
     `;
+  }
+
+  private async ensureCodeAvailable(
+    code: string,
+    admissionYear?: number,
+    excludeId?: string
+  ): Promise<void> {
+    const [existing] = await db`
+      SELECT id
+      FROM departments
+      WHERE code = ${code}
+        AND admission_year IS NOT DISTINCT FROM ${admissionYear ?? null}
+        AND (${excludeId ?? null}::uuid IS NULL OR id != ${excludeId ?? null})
+      LIMIT 1
+    `;
+
+    if (existing) {
+      throw new ConflictError(
+        `Department with code '${code}' already exists for admission year ${admissionYear ?? "unspecified"}`
+      );
+    }
+  }
+
+  private async ensureUpdatedCodeAvailable(
+    id: string,
+    data: UpdateDepartmentRequest
+  ): Promise<void> {
+    const [current] = await db`
+      SELECT code, admission_year
+      FROM departments
+      WHERE id = ${id} AND is_active = true
+    `;
+    if (!current) return;
+
+    await this.ensureCodeAvailable(
+      data.code ?? current.code,
+      data.admission_year ?? current.admission_year ?? undefined,
+      id
+    );
   }
 }
