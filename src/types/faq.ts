@@ -219,6 +219,41 @@ export interface FaqSearchResult {
   synonyms?: string[];
 }
 
+export interface QuickAddFaqAnswerRequest {
+  content: string;
+  campus_ids?: string[];
+  tags?: string[];
+  keywords?: string[];
+  synonyms?: string[];
+}
+
+export interface QuickAddFaqQuestionRequest {
+  content: string;
+  answers: QuickAddFaqAnswerRequest[];
+}
+
+export interface QuickAddFaqQuestionsRequest {
+  topic_id?: string;
+  sub_topic_id: string;
+  raw_text?: string;
+  default_campus_ids?: string[];
+  apply_all_campuses?: boolean;
+  questions?: QuickAddFaqQuestionRequest[];
+}
+
+export interface QuickAddFaqQuestionResult {
+  question: FaqQuestionPublic;
+  answers: FaqAnswerPublic[];
+}
+
+export interface QuickAddFaqQuestionsResponse {
+  data: QuickAddFaqQuestionResult[];
+  meta: {
+    question_count: number;
+    answer_count: number;
+  };
+}
+
 // ── Request DTOs ──────────────────────────────────────────────────────────────
 
 export interface CreateFaqTopicRequest {
@@ -337,18 +372,48 @@ export interface FaqSearchQuery {
 
 // ── Response wrappers ─────────────────────────────────────────────────────────
 
-export interface FaqTopicResponse { data: FaqTopicPublic }
-export interface FaqTopicsResponse { data: FaqTopicPublic[]; meta: PaginationMeta }
-export interface FaqSubTopicResponse { data: FaqSubTopicPublic }
-export interface FaqSubTopicsResponse { data: FaqSubTopicPublic[]; meta: PaginationMeta }
-export interface FaqQuestionResponse { data: FaqQuestionPublic }
-export interface FaqQuestionsResponse { data: FaqQuestionPublic[]; meta: PaginationMeta }
-export interface FaqAnswerResponse { data: FaqAnswerPublic }
-export interface FaqAnswersResponse { data: FaqAnswerPublic[]; meta: PaginationMeta }
-export interface FaqCollectionResponse { data: FaqCollectionPublic }
-export interface FaqCollectionsResponse { data: FaqCollectionPublic[]; meta: PaginationMeta }
-export interface FaqCollectionDetailResponse { data: FaqCollectionDetail }
-export interface FaqSearchResponse { data: FaqSearchResult[]; meta: PaginationMeta }
+export interface FaqTopicResponse {
+  data: FaqTopicPublic;
+}
+export interface FaqTopicsResponse {
+  data: FaqTopicPublic[];
+  meta: PaginationMeta;
+}
+export interface FaqSubTopicResponse {
+  data: FaqSubTopicPublic;
+}
+export interface FaqSubTopicsResponse {
+  data: FaqSubTopicPublic[];
+  meta: PaginationMeta;
+}
+export interface FaqQuestionResponse {
+  data: FaqQuestionPublic;
+}
+export interface FaqQuestionsResponse {
+  data: FaqQuestionPublic[];
+  meta: PaginationMeta;
+}
+export interface FaqAnswerResponse {
+  data: FaqAnswerPublic;
+}
+export interface FaqAnswersResponse {
+  data: FaqAnswerPublic[];
+  meta: PaginationMeta;
+}
+export interface FaqCollectionResponse {
+  data: FaqCollectionPublic;
+}
+export interface FaqCollectionsResponse {
+  data: FaqCollectionPublic[];
+  meta: PaginationMeta;
+}
+export interface FaqCollectionDetailResponse {
+  data: FaqCollectionDetail;
+}
+export interface FaqSearchResponse {
+  data: FaqSearchResult[];
+  meta: PaginationMeta;
+}
 
 interface PaginationMeta {
   total: number;

@@ -101,7 +101,9 @@ export const topicIdParamSchema = z.object({
   topicId: z.string().uuid("Invalid topic ID"),
 });
 
-export const faqSubTopicResponseSchema = z.object({ data: faqSubTopicPublicSchema });
+export const faqSubTopicResponseSchema = z.object({
+  data: faqSubTopicPublicSchema,
+});
 export const faqSubTopicsResponseSchema = z.object({
   data: z.array(faqSubTopicPublicSchema),
   meta: paginationMetaSchema,
@@ -130,6 +132,38 @@ export const createFaqQuestionSchema = z.object({
   content: z.string().min(1, "Question content is required"),
 });
 
+const quickAddFaqAnswerSchema = z.object({
+  content: z.string().min(1, "Answer content is required"),
+  campus_ids: z.array(z.string().uuid()).optional(),
+  tags: z.array(z.string()).optional(),
+  keywords: z.array(z.string()).optional(),
+  synonyms: z.array(z.string()).optional(),
+});
+
+const quickAddFaqQuestionSchema = z.object({
+  content: z.string().min(1, "Question content is required"),
+  answers: z
+    .array(quickAddFaqAnswerSchema)
+    .min(1, "At least one answer is required"),
+});
+
+export const quickAddFaqQuestionsSchema = z
+  .object({
+    topic_id: z.string().uuid("Invalid topic ID").optional(),
+    sub_topic_id: z.string().uuid("Invalid sub topic ID"),
+    raw_text: z.string().optional(),
+    default_campus_ids: z.array(z.string().uuid()).optional(),
+    apply_all_campuses: z.boolean().optional(),
+    questions: z.array(quickAddFaqQuestionSchema).optional(),
+  })
+  .refine(
+    (data) => Boolean(data.raw_text?.trim()) || Boolean(data.questions?.length),
+    {
+      message: "raw_text or questions is required",
+      path: ["questions"],
+    }
+  );
+
 export const updateFaqQuestionSchema = z.object({
   content: z.string().min(1).optional(),
   sub_topic_id: z.string().uuid().optional(),
@@ -148,7 +182,9 @@ export const faqQuestionsQuerySchema = paginationQuerySchema.extend({
   code: z.string().optional(),
 });
 
-export const faqQuestionResponseSchema = z.object({ data: faqQuestionPublicSchema });
+export const faqQuestionResponseSchema = z.object({
+  data: faqQuestionPublicSchema,
+});
 export const faqQuestionsResponseSchema = z.object({
   data: z.array(faqQuestionPublicSchema),
   meta: paginationMetaSchema,
@@ -212,10 +248,25 @@ export const questionIdParamSchema = z.object({
   questionId: z.string().uuid("Invalid question ID"),
 });
 
-export const faqAnswerResponseSchema = z.object({ data: faqAnswerPublicSchema });
+export const faqAnswerResponseSchema = z.object({
+  data: faqAnswerPublicSchema,
+});
 export const faqAnswersResponseSchema = z.object({
   data: z.array(faqAnswerPublicSchema),
   meta: paginationMetaSchema,
+});
+
+export const quickAddFaqQuestionsResponseSchema = z.object({
+  data: z.array(
+    z.object({
+      question: faqQuestionPublicSchema,
+      answers: z.array(faqAnswerPublicSchema),
+    })
+  ),
+  meta: z.object({
+    question_count: z.number().int(),
+    answer_count: z.number().int(),
+  }),
 });
 
 // ── FAQ Collections ───────────────────────────────────────────────────────────
@@ -290,7 +341,9 @@ export const transitionCollectionStatusSchema = z.object({
 });
 
 export const addCollectionItemsSchema = z.object({
-  question_ids: z.array(z.string().uuid()).min(1, "At least one question ID required"),
+  question_ids: z
+    .array(z.string().uuid())
+    .min(1, "At least one question ID required"),
 });
 
 export const copyCollectionSchema = z.object({
@@ -308,8 +361,12 @@ export const faqCollectionsQuerySchema = paginationQuerySchema.extend({
   admission_year: z.coerce.number().int().optional(),
 });
 
-export const faqCollectionResponseSchema = z.object({ data: faqCollectionPublicSchema });
-export const faqCollectionDetailResponseSchema = z.object({ data: faqCollectionDetailSchema });
+export const faqCollectionResponseSchema = z.object({
+  data: faqCollectionPublicSchema,
+});
+export const faqCollectionDetailResponseSchema = z.object({
+  data: faqCollectionDetailSchema,
+});
 export const faqCollectionsResponseSchema = z.object({
   data: z.array(faqCollectionPublicSchema),
   meta: paginationMetaSchema,

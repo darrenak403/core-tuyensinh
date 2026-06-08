@@ -3,6 +3,7 @@ import {
   deleteFaqQuestionHandler,
   getFaqQuestionHandler,
   getFaqQuestionsHandler,
+  quickAddFaqQuestionsHandler,
   transitionFaqQuestionStatusHandler,
   updateFaqQuestionHandler,
 } from "@handlers/faq-questions.handler";
@@ -15,6 +16,8 @@ import {
   faqQuestionResponseSchema,
   faqQuestionsQuerySchema,
   faqQuestionsResponseSchema,
+  quickAddFaqQuestionsResponseSchema,
+  quickAddFaqQuestionsSchema,
   transitionQuestionStatusSchema,
   uuidParamSchema,
   updateFaqQuestionSchema,
@@ -27,11 +30,15 @@ const getFaqQuestionsRoute = createRoute({
   path: "/api/v1/faq/questions",
   middleware: [authMiddleware] as const,
   summary: "List FAQ questions",
-  description: "Filter by topic_id, sub_topic_id, status (new/approved/rejected/deleted), content (text search), code",
+  description:
+    "Filter by topic_id, sub_topic_id, status (new/approved/rejected/deleted), content (text search), code",
   tags: ["FAQ"],
   request: { query: faqQuestionsQuerySchema },
   responses: {
-    200: { content: { "application/json": { schema: faqQuestionsResponseSchema } }, description: "Paginated list" },
+    200: {
+      content: { "application/json": { schema: faqQuestionsResponseSchema } },
+      description: "Paginated list",
+    },
   },
 });
 
@@ -43,8 +50,14 @@ const getFaqQuestionRoute = createRoute({
   tags: ["FAQ"],
   request: { params: uuidParamSchema },
   responses: {
-    200: { content: { "application/json": { schema: faqQuestionResponseSchema } }, description: "Question" },
-    404: { content: { "application/json": { schema: faqErrorSchema } }, description: "Not found" },
+    200: {
+      content: { "application/json": { schema: faqQuestionResponseSchema } },
+      description: "Question",
+    },
+    404: {
+      content: { "application/json": { schema: faqErrorSchema } },
+      description: "Not found",
+    },
   },
 });
 
@@ -53,12 +66,54 @@ const createFaqQuestionRoute = createRoute({
   path: "/api/v1/faq/questions",
   middleware: [authMiddleware] as const,
   summary: "Create FAQ question",
-  description: "Code is auto-generated as TOPIC_SUBTOPIC_SEQ (e.g. TUYEN_SINH_HOC_BONG_001)",
+  description:
+    "Code is auto-generated as TOPIC_SUBTOPIC_SEQ (e.g. TUYEN_SINH_HOC_BONG_001)",
   tags: ["FAQ"],
-  request: { body: { content: { "application/json": { schema: createFaqQuestionSchema } } } },
+  request: {
+    body: {
+      content: { "application/json": { schema: createFaqQuestionSchema } },
+    },
+  },
   responses: {
-    201: { content: { "application/json": { schema: faqQuestionResponseSchema } }, description: "Created" },
-    404: { content: { "application/json": { schema: faqErrorSchema } }, description: "Sub topic not found" },
+    201: {
+      content: { "application/json": { schema: faqQuestionResponseSchema } },
+      description: "Created",
+    },
+    404: {
+      content: { "application/json": { schema: faqErrorSchema } },
+      description: "Sub topic not found",
+    },
+  },
+});
+
+const quickAddFaqQuestionsRoute = createRoute({
+  method: "post",
+  path: "/api/v1/faq/questions/quick-add",
+  middleware: [authMiddleware] as const,
+  summary: "Quick add FAQ questions with answers",
+  description:
+    "Create multiple FAQ questions and their answers in one request. Supports structured questions or raw text with labels like 'Câu 1:' and 'Trả lời 1:'.",
+  tags: ["FAQ"],
+  request: {
+    body: {
+      content: { "application/json": { schema: quickAddFaqQuestionsSchema } },
+    },
+  },
+  responses: {
+    201: {
+      content: {
+        "application/json": { schema: quickAddFaqQuestionsResponseSchema },
+      },
+      description: "Created",
+    },
+    400: {
+      content: { "application/json": { schema: faqErrorSchema } },
+      description: "Invalid input",
+    },
+    404: {
+      content: { "application/json": { schema: faqErrorSchema } },
+      description: "Topic or sub topic not found",
+    },
   },
 });
 
@@ -70,11 +125,19 @@ const updateFaqQuestionRoute = createRoute({
   tags: ["FAQ"],
   request: {
     params: uuidParamSchema,
-    body: { content: { "application/json": { schema: updateFaqQuestionSchema } } },
+    body: {
+      content: { "application/json": { schema: updateFaqQuestionSchema } },
+    },
   },
   responses: {
-    200: { content: { "application/json": { schema: faqQuestionResponseSchema } }, description: "Updated" },
-    404: { content: { "application/json": { schema: faqErrorSchema } }, description: "Not found" },
+    200: {
+      content: { "application/json": { schema: faqQuestionResponseSchema } },
+      description: "Updated",
+    },
+    404: {
+      content: { "application/json": { schema: faqErrorSchema } },
+      description: "Not found",
+    },
   },
 });
 
@@ -83,16 +146,30 @@ const transitionFaqQuestionStatusRoute = createRoute({
   path: "/api/v1/faq/questions/{id}/status",
   middleware: [authMiddleware, requireAdmin] as const,
   summary: "Transition question status",
-  description: "Workflow: new→approved | new→rejected | approved→deleted | rejected→new",
+  description:
+    "Workflow: new→approved | new→rejected | approved→deleted | rejected→new",
   tags: ["FAQ"],
   request: {
     params: uuidParamSchema,
-    body: { content: { "application/json": { schema: transitionQuestionStatusSchema } } },
+    body: {
+      content: {
+        "application/json": { schema: transitionQuestionStatusSchema },
+      },
+    },
   },
   responses: {
-    200: { content: { "application/json": { schema: faqQuestionResponseSchema } }, description: "Status updated" },
-    400: { content: { "application/json": { schema: faqErrorSchema } }, description: "Invalid transition" },
-    404: { content: { "application/json": { schema: faqErrorSchema } }, description: "Not found" },
+    200: {
+      content: { "application/json": { schema: faqQuestionResponseSchema } },
+      description: "Status updated",
+    },
+    400: {
+      content: { "application/json": { schema: faqErrorSchema } },
+      description: "Invalid transition",
+    },
+    404: {
+      content: { "application/json": { schema: faqErrorSchema } },
+      description: "Not found",
+    },
   },
 });
 
@@ -104,16 +181,26 @@ const deleteFaqQuestionRoute = createRoute({
   tags: ["FAQ"],
   request: { params: uuidParamSchema },
   responses: {
-    200: { content: { "application/json": { schema: deleteResponseSchema } }, description: "Deleted" },
-    404: { content: { "application/json": { schema: faqErrorSchema } }, description: "Not found" },
+    200: {
+      content: { "application/json": { schema: deleteResponseSchema } },
+      description: "Deleted",
+    },
+    404: {
+      content: { "application/json": { schema: faqErrorSchema } },
+      description: "Not found",
+    },
   },
 });
 
 app.openapi(getFaqQuestionsRoute, getFaqQuestionsHandler);
 app.openapi(getFaqQuestionRoute, getFaqQuestionHandler);
 app.openapi(createFaqQuestionRoute, createFaqQuestionHandler);
+app.openapi(quickAddFaqQuestionsRoute, quickAddFaqQuestionsHandler);
 app.openapi(updateFaqQuestionRoute, updateFaqQuestionHandler);
-app.openapi(transitionFaqQuestionStatusRoute, transitionFaqQuestionStatusHandler);
+app.openapi(
+  transitionFaqQuestionStatusRoute,
+  transitionFaqQuestionStatusHandler
+);
 app.openapi(deleteFaqQuestionRoute, deleteFaqQuestionHandler);
 
 export default app;
