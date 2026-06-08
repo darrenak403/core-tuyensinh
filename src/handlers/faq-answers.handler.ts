@@ -55,6 +55,18 @@ export const transitionFaqAnswerStatusHandler = async (c: Context) => {
   return c.json({ data: a }, 200);
 };
 
+export const approvePendingFaqAnswersHandler = async (c: Context) => {
+  const user = c.get("user");
+  const result = await service.approvePending(user?.id);
+  return c.json(
+    {
+      message: `Approved ${result.approved_count} pending FAQ answer(s)`,
+      approved_count: result.approved_count,
+    },
+    200
+  );
+};
+
 export const deleteFaqAnswerHandler = async (c: Context) => {
   await service.delete(c.req.param("id")!);
   return c.json({ message: "FAQ answer deleted successfully" }, 200);

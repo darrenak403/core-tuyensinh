@@ -28,6 +28,11 @@ export const deleteResponseSchema = z.object({
   message: z.string(),
 });
 
+export const bulkApproveResponseSchema = z.object({
+  message: z.string(),
+  approved_count: z.number().int().min(0),
+});
+
 const questionStatusEnum = z.enum(["new", "approved", "rejected", "deleted"]);
 const answerStatusEnum = z.enum(["new", "approved", "rejected", "deleted"]);
 const collectionStatusEnum = z.enum(["draft", "published", "archived"]);
@@ -346,6 +351,10 @@ export const addCollectionItemsSchema = z.object({
     .min(1, "At least one question ID required"),
 });
 
+export const addCollectionSubTopicQuestionsSchema = z.object({
+  sub_topic_id: z.string().uuid("Invalid sub topic ID"),
+});
+
 export const copyCollectionSchema = z.object({
   admission_year: z.number().int().min(2020).max(2050),
   name: z.string().min(1).max(255).optional(),
@@ -376,6 +385,11 @@ export const addCollectionItemsResponseSchema = z.object({
   message: z.string(),
   inserted: z.number(),
 });
+
+export const addCollectionSubTopicQuestionsResponseSchema =
+  addCollectionItemsResponseSchema.extend({
+    matched_count: z.number(),
+  });
 
 // ── Search ────────────────────────────────────────────────────────────────────
 

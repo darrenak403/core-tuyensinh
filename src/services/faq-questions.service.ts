@@ -1,14 +1,15 @@
-import { db } from "@config/database";
 import type {
-  FaqAnswerPublic,
+  BulkApproveResult,
   CreateFaqQuestionRequest,
+  FaqAnswerPublic,
   FaqQuestionPublic,
   FaqQuestionsQuery,
-  QuickAddFaqQuestionsRequest,
-  QuickAddFaqQuestionResult,
   QuestionStatus,
+  QuickAddFaqQuestionResult,
+  QuickAddFaqQuestionsRequest,
   UpdateFaqQuestionRequest,
 } from "@app-types/faq";
+import { db } from "@config/database";
 import { z } from "zod";
 import {
   BaseService,
@@ -71,7 +72,7 @@ type NormalizedQuickAddQuestion = {
 function toPgTextArray(arr: string[] | null | undefined): string | null {
   if (!arr || arr.length === 0) return null;
   const escaped = arr
-    .map((s) => '"' + s.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"')
+    .map((s) => `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`)
     .join(",");
   return `{${escaped}}`;
 }
@@ -107,13 +108,15 @@ function parseQuickAddRawText(rawText: string): NormalizedQuickAddQuestion[] {
 
   for (let index = 0; index < matches.length; index += 1) {
     const match = matches[index];
-    const label = match[1].toLowerCase();
-    const contentStart = match.index! + match[0].length;
+    if (!match) continue;
+
+    const label = match[1]?.toLowerCase();
+    const contentStart = (match.index ?? 0) + match[0].length;
     const contentEnd = matches[index + 1]?.index ?? rawText.length;
     const content = rawText.slice(contentStart, contentEnd).trim();
     if (!content) continue;
 
-    if (label.startsWith("câu")) {
+    if (label?.startsWith("câu")) {
       currentQuestion = { content: stripQuestionPrefix(content), answers: [] };
       questions.push(currentQuestion);
       continue;
@@ -312,6 +315,25 @@ export class FaqQuestionsService extends BaseService<
       )
     `;
     return this.parseOne(row);
+  }
+
+  async approvePending(userId?: string): Promise<BulkApproveResult> {
+    const [row] = await db`
+      WITH approved AS (
+        UPDATE faq_questions
+        SET
+          status = 'approved',
+          approved_by = ${userId ?? null},
+          approved_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE status = 'new'
+          AND is_active = true
+        RETURNING id
+      )
+      SELECT COUNT(*)::int AS approved_count FROM approved
+    `;
+
+    return { approved_count: Number(row?.approved_count ?? 0) };
   }
 
   async delete(id: string): Promise<void> {

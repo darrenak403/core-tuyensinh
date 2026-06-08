@@ -1,5 +1,6 @@
 import {
   addFaqCollectionItemsHandler,
+  addFaqCollectionSubTopicQuestionsHandler,
   copyFaqCollectionHandler,
   createFaqCollectionHandler,
   deleteFaqCollectionHandler,
@@ -15,23 +16,25 @@ import {
 } from "@handlers/faq-collections.handler";
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { authMiddleware, requireAdmin } from "@middleware/auth";
-import { z } from "zod";
 import {
   addCollectionItemsResponseSchema,
   addCollectionItemsSchema,
+  addCollectionSubTopicQuestionsResponseSchema,
+  addCollectionSubTopicQuestionsSchema,
   collectionItemParamSchema,
   copyCollectionSchema,
   createFaqCollectionSchema,
   deleteResponseSchema,
-  faqCollectionResponseSchema,
   faqCollectionDetailResponseSchema,
+  faqCollectionResponseSchema,
   faqCollectionsQuerySchema,
   faqCollectionsResponseSchema,
   faqErrorSchema,
   transitionCollectionStatusSchema,
-  uuidParamSchema,
   updateFaqCollectionSchema,
+  uuidParamSchema,
 } from "@schemas/faq";
+import { z } from "zod";
 
 const app = new OpenAPIHono();
 
@@ -194,6 +197,24 @@ const addFaqCollectionItemsRoute = createRoute({
   },
 });
 
+const addFaqCollectionSubTopicQuestionsRoute = createRoute({
+  method: "post",
+  path: "/api/v1/faq/collections/{id}/items/by-sub-topic",
+  middleware: [authMiddleware, requireAdmin] as const,
+  summary: "Add all approved questions from a sub-topic to a collection",
+  description:
+    "Adds every active approved FAQ question in the selected sub-topic. Existing collection items are ignored.",
+  tags: ["FAQ Collections"],
+  request: {
+    params: uuidParamSchema,
+    body: { content: { "application/json": { schema: addCollectionSubTopicQuestionsSchema } } },
+  },
+  responses: {
+    200: { content: { "application/json": { schema: addCollectionSubTopicQuestionsResponseSchema } }, description: "Sub-topic questions added" },
+    404: { content: { "application/json": { schema: faqErrorSchema } }, description: "Collection not found" },
+  },
+});
+
 const removeFaqCollectionItemRoute = createRoute({
   method: "delete",
   path: "/api/v1/faq/collections/{id}/items/{questionId}",
@@ -231,6 +252,7 @@ app.openapi(updateFaqCollectionRoute, updateFaqCollectionHandler);
 app.openapi(transitionFaqCollectionStatusRoute, transitionFaqCollectionStatusHandler);
 app.openapi(copyFaqCollectionRoute, copyFaqCollectionHandler);
 app.openapi(addFaqCollectionItemsRoute, addFaqCollectionItemsHandler);
+app.openapi(addFaqCollectionSubTopicQuestionsRoute, addFaqCollectionSubTopicQuestionsHandler);
 app.openapi(removeFaqCollectionItemRoute, removeFaqCollectionItemHandler);
 app.openapi(deleteFaqCollectionRoute, deleteFaqCollectionHandler);
 

@@ -1,5 +1,5 @@
-import { FaqCollectionsService } from "@services/faq-collections.service";
 import type { CollectionStatus, FaqCollectionExportRow } from "@app-types/faq";
+import { FaqCollectionsService } from "@services/faq-collections.service";
 import type { Context } from "hono";
 
 const service = new FaqCollectionsService();
@@ -124,6 +124,19 @@ export const addFaqCollectionItemsHandler = async (c: Context) => {
   const { question_ids } = await c.req.json();
   const inserted = await service.addItems(c.req.param("id")!, question_ids ?? []);
   return c.json({ message: `Added ${inserted} question(s) to collection`, inserted }, 200);
+};
+
+export const addFaqCollectionSubTopicQuestionsHandler = async (c: Context) => {
+  const { sub_topic_id } = await c.req.json();
+  const result = await service.addApprovedQuestionsBySubTopic(c.req.param("id"), sub_topic_id);
+  return c.json(
+    {
+      message: `Added ${result.inserted} approved question(s) from sub-topic to collection`,
+      inserted: result.inserted,
+      matched_count: result.matched_count,
+    },
+    200
+  );
 };
 
 export const removeFaqCollectionItemHandler = async (c: Context) => {

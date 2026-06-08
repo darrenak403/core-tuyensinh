@@ -1,6 +1,7 @@
 import { db } from "@config/database";
 import type {
   AnswerStatus,
+  BulkApproveResult,
   CreateFaqAnswerRequest,
   FaqAnswerPublic,
   FaqSearchResult,
@@ -137,6 +138,25 @@ export class FaqAnswersService extends BaseService<FaqAnswerPublic, CreateFaqAns
       )
     `;
     return this.parseOne(row);
+  }
+
+  async approvePending(userId?: string): Promise<BulkApproveResult> {
+    const [row] = await db`
+      WITH approved AS (
+        UPDATE faq_answers
+        SET
+          status = 'approved',
+          approved_by = ${userId ?? null},
+          approved_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE status = 'new'
+          AND is_active = true
+        RETURNING id
+      )
+      SELECT COUNT(*)::int AS approved_count FROM approved
+    `;
+
+    return { approved_count: Number(row?.approved_count ?? 0) };
   }
 
   async delete(id: string): Promise<void> {

@@ -2,6 +2,10 @@ export type QuestionStatus = "new" | "approved" | "rejected" | "deleted";
 export type AnswerStatus = "new" | "approved" | "rejected" | "deleted";
 export type CollectionStatus = "draft" | "published" | "archived";
 
+export interface BulkApproveResult {
+  approved_count: number;
+}
+
 // ── DB entities ──────────────────────────────────────────────────────────────
 
 export interface FaqTopic {

@@ -1,4 +1,5 @@
 import {
+  approvePendingFaqQuestionsHandler,
   createFaqQuestionHandler,
   deleteFaqQuestionHandler,
   getFaqQuestionHandler,
@@ -10,6 +11,7 @@ import {
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { authMiddleware, requireAdmin } from "@middleware/auth";
 import {
+  bulkApproveResponseSchema,
   createFaqQuestionSchema,
   deleteResponseSchema,
   faqErrorSchema,
@@ -117,6 +119,22 @@ const quickAddFaqQuestionsRoute = createRoute({
   },
 });
 
+const approvePendingFaqQuestionsRoute = createRoute({
+  method: "patch",
+  path: "/api/v1/faq/questions/approve-pending",
+  middleware: [authMiddleware, requireAdmin] as const,
+  summary: "Approve all pending FAQ questions",
+  description:
+    "Approve every active FAQ question whose status is new. No request body is required.",
+  tags: ["FAQ"],
+  responses: {
+    200: {
+      content: { "application/json": { schema: bulkApproveResponseSchema } },
+      description: "Pending questions approved",
+    },
+  },
+});
+
 const updateFaqQuestionRoute = createRoute({
   method: "put",
   path: "/api/v1/faq/questions/{id}",
@@ -193,6 +211,7 @@ const deleteFaqQuestionRoute = createRoute({
 });
 
 app.openapi(getFaqQuestionsRoute, getFaqQuestionsHandler);
+app.openapi(approvePendingFaqQuestionsRoute, approvePendingFaqQuestionsHandler);
 app.openapi(getFaqQuestionRoute, getFaqQuestionHandler);
 app.openapi(createFaqQuestionRoute, createFaqQuestionHandler);
 app.openapi(quickAddFaqQuestionsRoute, quickAddFaqQuestionsHandler);

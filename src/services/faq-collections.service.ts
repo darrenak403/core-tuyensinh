@@ -1,4 +1,3 @@
-import { db } from "@config/database";
 import type {
   CollectionStatus,
   CopyFaqCollectionRequest,
@@ -12,6 +11,7 @@ import type {
   FaqCollectionTopicDetail,
   UpdateFaqCollectionRequest,
 } from "@app-types/faq";
+import { db } from "@config/database";
 import { createFaqCollectionSchema, updateFaqCollectionSchema } from "@schemas/faq";
 import { z } from "zod";
 import { BaseService, type PaginatedResponse, commonSchemas } from "./base.service";
@@ -58,6 +58,10 @@ type FaqCollectionDetailRow = {
   campus_codes: string[] | string | null;
   campus_names: string[] | string | null;
   applies_to_all_campuses: boolean | null;
+};
+
+type FaqCollectionQuestionIdRow = {
+  id: string;
 };
 
 function parsePgArray(val: unknown): string[] {
@@ -200,6 +204,24 @@ export class FaqCollectionsService extends BaseService<FaqCollectionPublic, Crea
     const uuidArray = questionIds.length > 0 ? `{${questionIds.join(',')}}` : '{}';
     const [row] = await db`SELECT add_faq_collection_items(${collectionId}, ${uuidArray}::uuid[]) AS inserted`;
     return Number(row?.inserted ?? 0);
+  }
+
+  async addApprovedQuestionsBySubTopic(
+    collectionId: string,
+    subTopicId: string
+  ): Promise<{ matched_count: number; inserted: number }> {
+    const rows = (await db`
+      SELECT id
+      FROM faq_questions
+      WHERE sub_topic_id = ${subTopicId}
+        AND status = 'approved'
+        AND is_active = true
+      ORDER BY created_at ASC
+    `) as FaqCollectionQuestionIdRow[];
+    const questionIds = rows.map((row) => String(row.id));
+    const inserted = await this.addItems(collectionId, questionIds);
+
+    return { matched_count: questionIds.length, inserted };
   }
 
   async removeItem(collectionId: string, questionId: string): Promise<void> {
