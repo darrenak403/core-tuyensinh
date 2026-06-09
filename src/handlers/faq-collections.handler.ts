@@ -1,4 +1,9 @@
-import type { CollectionStatus, FaqCollectionExportRow } from "@app-types/faq";
+import type {
+  CollectionStatus,
+  FaqCollectionExportRow,
+  FaqCollectionPublic,
+  FaqCollectionTopicMarkdownFile,
+} from "@app-types/faq";
 import { FaqCollectionsService } from "@services/faq-collections.service";
 import type { Context } from "hono";
 
@@ -7,7 +12,9 @@ const service = new FaqCollectionsService();
 export const getFaqCollectionsHandler = async (c: Context) => {
   const limit = Number(c.req.query("limit")) || 50;
   const offset = Number(c.req.query("offset")) || 0;
-  const year = c.req.query("admission_year") ? Number(c.req.query("admission_year")) : undefined;
+  const year = c.req.query("admission_year")
+    ? Number(c.req.query("admission_year"))
+    : undefined;
   const filters = {
     status: c.req.query("status"),
     admission_year: year,
@@ -17,13 +24,21 @@ export const getFaqCollectionsHandler = async (c: Context) => {
 
 export const getFaqCollectionHandler = async (c: Context) => {
   const col = await service.findById(c.req.param("id")!);
-  if (!col) return c.json({ error: "NOT_FOUND", message: "FAQ collection not found" }, 404);
+  if (!col)
+    return c.json(
+      { error: "NOT_FOUND", message: "FAQ collection not found" },
+      404
+    );
   return c.json({ data: col }, 200);
 };
 
 export const getFaqCollectionDetailHandler = async (c: Context) => {
   const col = await service.findDetailById(c.req.param("id")!);
-  if (!col) return c.json({ error: "NOT_FOUND", message: "FAQ collection not found" }, 404);
+  if (!col)
+    return c.json(
+      { error: "NOT_FOUND", message: "FAQ collection not found" },
+      404
+    );
   return c.json({ data: col }, 200);
 };
 
@@ -32,7 +47,10 @@ export const exportFaqCollectionCsvHandler = async (c: Context) => {
   const collection = await service.findById(id);
   const rows = await service.getExportRows(id);
   if (!collection || !rows) {
-    return c.json({ error: "NOT_FOUND", message: "FAQ collection not found" }, 404);
+    return c.json(
+      { error: "NOT_FOUND", message: "FAQ collection not found" },
+      404
+    );
   }
 
   const csv = toCsv([
@@ -67,7 +85,10 @@ export const exportFaqCollectionCsvHandler = async (c: Context) => {
   ]);
 
   c.header("Content-Type", "text/csv; charset=utf-8");
-  c.header("Content-Disposition", `attachment; filename="${buildCollectionFileName(collection.name, "csv")}"`);
+  c.header(
+    "Content-Disposition",
+    `attachment; filename="${buildCollectionFileName(collection.name, "csv")}"`
+  );
   return c.body(`\uFEFF${csv}`, 200);
 };
 
@@ -76,13 +97,19 @@ export const exportFaqCollectionExcelHandler = async (c: Context) => {
   const collection = await service.findById(id);
   const rows = await service.getExportRows(id);
   if (!collection || !rows) {
-    return c.json({ error: "NOT_FOUND", message: "FAQ collection not found" }, 404);
+    return c.json(
+      { error: "NOT_FOUND", message: "FAQ collection not found" },
+      404
+    );
   }
 
   const excel = toExcelXml(collection.name, rows);
 
   c.header("Content-Type", "application/vnd.ms-excel; charset=utf-8");
-  c.header("Content-Disposition", `attachment; filename="${buildCollectionFileName(collection.name, "xls")}"`);
+  c.header(
+    "Content-Disposition",
+    `attachment; filename="${buildCollectionFileName(collection.name, "xls")}"`
+  );
   return c.body(excel, 200);
 };
 
@@ -91,14 +118,49 @@ export const exportFaqCollectionMarkdownHandler = async (c: Context) => {
   const collection = await service.findById(id);
   const rows = await service.getExportRows(id);
   if (!collection || !rows) {
-    return c.json({ error: "NOT_FOUND", message: "FAQ collection not found" }, 404);
+    return c.json(
+      { error: "NOT_FOUND", message: "FAQ collection not found" },
+      404
+    );
   }
 
-  const markdown = rows.map(formatFaqRecordMarkdown).join("\n\n---\n\n");
+  const markdown = formatFaqCollectionMarkdown(rows, collection.admission_year);
 
   c.header("Content-Type", "text/markdown; charset=utf-8");
-  c.header("Content-Disposition", `attachment; filename="${buildCollectionFileName(collection.name, "md")}"`);
+  c.header(
+    "Content-Disposition",
+    `attachment; filename="${buildCollectionFileName(collection.name, "md")}"`
+  );
   return c.body(markdown, 200);
+};
+
+export const exportFaqCollectionTopicsMarkdownHandler = async (c: Context) => {
+  const id = c.req.param("id")!;
+  const { topic_ids } = await c.req.json();
+  const topicIds = topic_ids ?? [];
+  const collection = await service.findById(id);
+  const rows = await service.getExportRowsByTopicIds(id, topicIds);
+  if (!collection || !rows) {
+    return c.json(
+      { error: "NOT_FOUND", message: "FAQ collection not found" },
+      404
+    );
+  }
+
+  const files = buildTopicMarkdownFiles(collection, rows);
+
+  return c.json(
+    {
+      data: files,
+      meta: {
+        collection_id: collection.id,
+        collection_name: collection.name,
+        requested_topic_count: topicIds.length,
+        exported_topic_count: files.length,
+      },
+    },
+    200
+  );
 };
 
 export const createFaqCollectionHandler = async (c: Context) => {
@@ -116,19 +178,32 @@ export const updateFaqCollectionHandler = async (c: Context) => {
 export const transitionFaqCollectionStatusHandler = async (c: Context) => {
   const { status } = await c.req.json();
   const user = c.get("user");
-  const col = await service.transitionStatus(c.req.param("id")!, status as CollectionStatus, user?.id);
+  const col = await service.transitionStatus(
+    c.req.param("id")!,
+    status as CollectionStatus,
+    user?.id
+  );
   return c.json({ data: col }, 200);
 };
 
 export const addFaqCollectionItemsHandler = async (c: Context) => {
   const { question_ids } = await c.req.json();
-  const inserted = await service.addItems(c.req.param("id")!, question_ids ?? []);
-  return c.json({ message: `Added ${inserted} question(s) to collection`, inserted }, 200);
+  const inserted = await service.addItems(
+    c.req.param("id")!,
+    question_ids ?? []
+  );
+  return c.json(
+    { message: `Added ${inserted} question(s) to collection`, inserted },
+    200
+  );
 };
 
 export const addFaqCollectionSubTopicQuestionsHandler = async (c: Context) => {
   const { sub_topic_id } = await c.req.json();
-  const result = await service.addApprovedQuestionsBySubTopic(c.req.param("id"), sub_topic_id);
+  const result = await service.addApprovedQuestionsBySubTopic(
+    c.req.param("id"),
+    sub_topic_id
+  );
   return c.json(
     {
       message: `Added ${result.inserted} approved question(s) from sub-topic to collection`,
@@ -197,7 +272,10 @@ function toExcelXml(title: string, rows: FaqCollectionExportRow[]): string {
         row.answer_status,
         row.answer_status === "approved" ? "Có" : "Không",
       ]
-        .map((cell) => `<Cell ss:StyleID="Body"><Data ss:Type="String">${escapeXml(cell)}</Data></Cell>`)
+        .map(
+          (cell) =>
+            `<Cell ss:StyleID="Body"><Data ss:Type="String">${escapeXml(cell)}</Data></Cell>`
+        )
         .join("")
     )
     .map((cells) => `<Row ss:AutoFitHeight="1">${cells}</Row>`)
@@ -278,8 +356,15 @@ function escapeXml(value: string): string {
     .replace(/'/g, "&apos;");
 }
 
-function buildCollectionFileName(collectionName: string, extension: "csv" | "xls" | "md"): string {
+function buildCollectionFileName(
+  collectionName: string,
+  extension: "csv" | "xls" | "md"
+): string {
   return `${slugifyFileName(collectionName)}.${extension}`;
+}
+
+function buildTopicFileName(collectionName: string, topicName: string): string {
+  return `${slugifyFileName(collectionName)}-${slugifyFileName(topicName)}.md`;
 }
 
 function slugifyFileName(value: string): string {
@@ -295,30 +380,123 @@ function slugifyFileName(value: string): string {
   return normalized || "faq-collection";
 }
 
-function formatFaqRecordMarkdown(row: FaqCollectionExportRow): string {
-  const aliases = row.question_aliases.length > 0 ? row.question_aliases.join("\n") : "";
+function buildTopicMarkdownFiles(
+  collection: FaqCollectionPublic,
+  rows: FaqCollectionExportRow[]
+): FaqCollectionTopicMarkdownFile[] {
+  const groupedRows = new Map<string, FaqCollectionExportRow[]>();
 
-  return [
-    "FAQ Record",
-    `Record ID: ${row.record_id}`,
+  for (const row of rows) {
+    const topicRows = groupedRows.get(row.topic_id) ?? [];
+    topicRows.push(row);
+    groupedRows.set(row.topic_id, topicRows);
+  }
+
+  return Array.from(groupedRows.values()).map((topicRows) => {
+    const first = topicRows[0]!;
+    return {
+      topic_id: first.topic_id,
+      topic_code: first.topic_code,
+      topic_name: first.main_topic,
+      filename: buildTopicFileName(collection.name, first.main_topic),
+      content: formatFaqCollectionMarkdown(
+        topicRows,
+        collection.admission_year
+      ),
+      record_count: topicRows.length,
+    };
+  });
+}
+
+function formatFaqCollectionMarkdown(
+  rows: FaqCollectionExportRow[],
+  admissionYear: number
+): string {
+  const lines = [
+    "---",
+    "document_type: faq_collection",
+    "schema_version: 1",
+    "---",
     "",
-    `Main Topic: ${row.main_topic}`,
+    "# FAQ",
     "",
-    `Sub Topic: ${row.sub_topic}`,
-    "",
-    `Question: ${row.question}`,
-    "",
-    "Question Aliases:",
-    "",
-    aliases,
-    "",
-    `Answer: ${row.answer}`,
-    "",
-    "Metadata:",
-    "",
-    `admission_year: ${row.admission_year}`,
-    `campus: ${row.campus}`,
-    "status: active",
-    "priority: 1",
-  ].join("\n");
+    `## Năm ${admissionYear}`,
+  ];
+  let previousTopicId = "";
+  let previousSubTopic = "";
+  let previousQuestionCode = "";
+  let hasRenderedQuestion = false;
+
+  for (let i = 0; i < rows.length; i += 1) {
+    const row = rows[i]!;
+    const isNewTopic = row.topic_id !== previousTopicId;
+    const isNewSubTopic = isNewTopic || row.sub_topic !== previousSubTopic;
+
+    if (isNewTopic) {
+      lines.push("", `### ${row.main_topic}`);
+      previousTopicId = row.topic_id;
+      previousSubTopic = "";
+      previousQuestionCode = "";
+    }
+
+    if (isNewSubTopic) {
+      lines.push("", `#### ${row.sub_topic}`);
+      previousSubTopic = row.sub_topic;
+      previousQuestionCode = "";
+    }
+
+    const questionRows = rows.filter(
+      (item) =>
+        item.topic_id === row.topic_id &&
+        item.sub_topic === row.sub_topic &&
+        item.question_code === row.question_code
+    );
+    const isNewQuestion = row.question_code !== previousQuestionCode;
+
+    if (isNewQuestion) {
+      if (hasRenderedQuestion) {
+        lines.push("", "---");
+      }
+
+      lines.push(
+        "",
+        `##### ${row.question_code}`,
+        "",
+        `*Câu hỏi:* ${row.question}`
+      );
+
+      const aliases = uniqueStrings(
+        questionRows.flatMap((item) => item.question_aliases)
+      );
+      if (aliases.length > 0) {
+        lines.push("", "*Câu hỏi tương đương:*");
+        for (const alias of aliases) {
+          lines.push(`- ${alias}`);
+        }
+      }
+
+      previousQuestionCode = row.question_code;
+      hasRenderedQuestion = true;
+    }
+
+    if (row.answer_id) {
+      lines.push(
+        "",
+        `###### Câu trả lời: ${row.campus_code}`,
+        "",
+        `- answer_id: ${row.answer_id}`,
+        `- campus_code: ${row.campus_code}`,
+        "- status: active",
+        "- priority: 1",
+        "",
+        row.answer
+      );
+    }
+  }
+
+  return lines.join("\n").trimEnd();
+}
+
+function uniqueStrings(values: string[]): string[] {
+  return Array.from(new Set(values.filter(Boolean)));
 }

@@ -9,7 +9,7 @@ FE cần hỗ trợ quản trị bộ câu hỏi FAQ theo năm tuyển sinh:
 - Gán câu trả lời cho tất cả cơ sở hoặc một số cơ sở cụ thể.
 - Xem chi tiết một bộ câu hỏi, chia theo chủ đề chính -> chủ đề con -> câu hỏi -> câu trả lời.
 - Xuất file mở bằng Excel gồm topic, sub-topic, câu hỏi, aliases, câu trả lời kèm campus, năm, cơ sở, trạng thái duyệt.
-- Xuất file Markdown theo format `FAQ Record` để FE cho tải xuống hoặc preview.
+- Xuất file Markdown theo format `faq_collection` để FE cho tải xuống hoặc preview.
 
 Các endpoint quản trị cần gửi `Authorization: Bearer <token>`.
 
@@ -278,47 +278,43 @@ Tên file trả về:
 
 `<collection_name_slug>.md`
 
-Mỗi record tương ứng một cặp câu hỏi-câu trả lời-cơ sở. Nếu một câu trả lời gán nhiều cơ sở, file sẽ có nhiều record, mỗi record một cơ sở.
-
-Record ID format:
-
-`FAQ<YEAR><CAMPUS><TOPIC><SEQ>`
-
-Trong đó:
-
-- `YEAR`: năm tuyển sinh của collection.
-- `CAMPUS`: mã campus đã bỏ ký tự đặc biệt; câu trả lời áp dụng toàn bộ cơ sở dùng `ALL`.
-- `TOPIC`: mã chủ đề chính đã bỏ ký tự đặc biệt.
-- `SEQ`: số thứ tự tăng dần, 3 chữ số.
+File được nhóm theo năm tuyển sinh -> chủ đề chính -> chủ đề con -> câu hỏi -> câu trả lời theo campus.
 
 Format file:
 
 ```md
-FAQ Record
-Record ID: FAQ2026ALLTUYENSINH001
+---
+document_type: faq_collection
+schema_version: 1
+---
 
-Main Topic: Tuyển sinh
+# FAQ
 
-Sub Topic: Học bổng
+## Năm 2026
 
-Question: Điều kiện nhận học bổng là gì?
+### Tuyển sinh
 
-Question Aliases:
+#### Phương thức xét tuyển
 
-làm sao nhận học bổng
-cách lấy học bổng
+##### FAQ-TS-PTXT-001
 
-Answer: Thí sinh cần đạt các điều kiện theo quy định từng năm.
+*Câu hỏi:* Đại học FPT áp dụng phương thức xét tuyển nào năm 2026?
 
-Metadata:
+*Câu hỏi tương đương:*
+- FPTU xét tuyển năm 2026 như thế nào?
 
-admission_year: 2026
-campus: Tất cả cơ sở
-status: active
-priority: 1
+###### Câu trả lời: ALL
+
+- answer_id: ANSWER-001
+- campus_code: ALL
+- status: active
+- priority: 1
+
+Nhà trường dự kiến xét tuyển bằng phương thức kết hợp kết quả kỳ thi tốt
+nghiệp THPT năm 2026 với kết quả học tập THPT.
 ```
 
-Các record trong cùng file được ngăn cách bằng:
+Các câu hỏi trong cùng file được ngăn cách bằng:
 
 ```md
 ---

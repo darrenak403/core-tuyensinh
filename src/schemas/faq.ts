@@ -355,6 +355,12 @@ export const addCollectionSubTopicQuestionsSchema = z.object({
   sub_topic_id: z.string().uuid("Invalid sub topic ID"),
 });
 
+export const exportFaqCollectionTopicsMarkdownSchema = z.object({
+  topic_ids: z
+    .array(z.string().uuid("Invalid topic ID"))
+    .min(1, "At least one topic ID required"),
+});
+
 export const copyCollectionSchema = z.object({
   admission_year: z.number().int().min(2020).max(2050),
   name: z.string().min(1).max(255).optional(),
@@ -390,6 +396,25 @@ export const addCollectionSubTopicQuestionsResponseSchema =
   addCollectionItemsResponseSchema.extend({
     matched_count: z.number(),
   });
+
+export const exportFaqCollectionTopicsMarkdownResponseSchema = z.object({
+  data: z.array(
+    z.object({
+      topic_id: z.string().uuid(),
+      topic_code: z.string(),
+      topic_name: z.string(),
+      filename: z.string(),
+      content: z.string(),
+      record_count: z.number().int(),
+    })
+  ),
+  meta: z.object({
+    collection_id: z.string().uuid(),
+    collection_name: z.string(),
+    requested_topic_count: z.number().int(),
+    exported_topic_count: z.number().int(),
+  }),
+});
 
 // ── Search ────────────────────────────────────────────────────────────────────
 

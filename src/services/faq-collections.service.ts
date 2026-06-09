@@ -12,9 +12,16 @@ import type {
   UpdateFaqCollectionRequest,
 } from "@app-types/faq";
 import { db } from "@config/database";
-import { createFaqCollectionSchema, updateFaqCollectionSchema } from "@schemas/faq";
+import {
+  createFaqCollectionSchema,
+  updateFaqCollectionSchema,
+} from "@schemas/faq";
 import { z } from "zod";
-import { BaseService, type PaginatedResponse, commonSchemas } from "./base.service";
+import {
+  BaseService,
+  type PaginatedResponse,
+  commonSchemas,
+} from "./base.service";
 
 const collectionPublicSchema = z.object({
   id: commonSchemas.uuid,
@@ -74,11 +81,27 @@ function parsePgArray(val: unknown): string[] {
     .map((s) => s.trim().replace(/^"|"$/g, ""));
 }
 
-export class FaqCollectionsService extends BaseService<FaqCollectionPublic, CreateFaqCollectionRequest, UpdateFaqCollectionRequest> {
+export class FaqCollectionsService extends BaseService<
+  FaqCollectionPublic,
+  CreateFaqCollectionRequest,
+  UpdateFaqCollectionRequest
+> {
   protected readonly tableName = "faq_collections";
-  protected readonly publicSchema = collectionPublicSchema as z.ZodType<FaqCollectionPublic, any, any>;
-  protected readonly createSchema = createFaqCollectionSchema as z.ZodType<CreateFaqCollectionRequest, any, any>;
-  protected readonly updateSchema = updateFaqCollectionSchema as z.ZodType<UpdateFaqCollectionRequest, any, any>;
+  protected readonly publicSchema = collectionPublicSchema as z.ZodType<
+    FaqCollectionPublic,
+    any,
+    any
+  >;
+  protected readonly createSchema = createFaqCollectionSchema as z.ZodType<
+    CreateFaqCollectionRequest,
+    any,
+    any
+  >;
+  protected readonly updateSchema = updateFaqCollectionSchema as z.ZodType<
+    UpdateFaqCollectionRequest,
+    any,
+    any
+  >;
 
   async findAll(
     filters: { status?: string; admission_year?: number },
@@ -97,7 +120,12 @@ export class FaqCollectionsService extends BaseService<FaqCollectionPublic, Crea
           ${filters.admission_year ?? null}
         ) AS total`,
     ]);
-    return this.createPaginatedResponse(this.parseMany(dataRows), this.extractTotal(countRows), limit, offset);
+    return this.createPaginatedResponse(
+      this.parseMany(dataRows),
+      this.extractTotal(countRows),
+      limit,
+      offset
+    );
   }
 
   async findById(id: string): Promise<FaqCollectionPublic | null> {
@@ -170,6 +198,16 @@ export class FaqCollectionsService extends BaseService<FaqCollectionPublic, Crea
     return this.buildExportRows(detail);
   }
 
+  async getExportRowsByTopicIds(
+    id: string,
+    topicIds: string[]
+  ): Promise<FaqCollectionExportRow[] | null> {
+    const detail = await this.findDetailById(id);
+    if (!detail) return null;
+    const selectedTopicIds = new Set(topicIds);
+    return this.buildExportRows(detail, selectedTopicIds);
+  }
+
   async create(data: CreateFaqCollectionRequest): Promise<FaqCollectionPublic> {
     const [row] = await db`
       SELECT * FROM create_faq_collection(
@@ -181,7 +219,10 @@ export class FaqCollectionsService extends BaseService<FaqCollectionPublic, Crea
     return this.parseOne(row);
   }
 
-  async update(id: string, data: UpdateFaqCollectionRequest): Promise<FaqCollectionPublic> {
+  async update(
+    id: string,
+    data: UpdateFaqCollectionRequest
+  ): Promise<FaqCollectionPublic> {
     const [row] = await db`
       SELECT * FROM update_faq_collection(
         ${id},
@@ -193,7 +234,11 @@ export class FaqCollectionsService extends BaseService<FaqCollectionPublic, Crea
     return this.parseOne(row);
   }
 
-  async transitionStatus(id: string, newStatus: CollectionStatus, userId?: string): Promise<FaqCollectionPublic> {
+  async transitionStatus(
+    id: string,
+    newStatus: CollectionStatus,
+    userId?: string
+  ): Promise<FaqCollectionPublic> {
     const [row] = await db`
       SELECT * FROM transition_faq_collection_status(${id}, ${newStatus}, ${userId ?? null})
     `;
@@ -201,8 +246,10 @@ export class FaqCollectionsService extends BaseService<FaqCollectionPublic, Crea
   }
 
   async addItems(collectionId: string, questionIds: string[]): Promise<number> {
-    const uuidArray = questionIds.length > 0 ? `{${questionIds.join(',')}}` : '{}';
-    const [row] = await db`SELECT add_faq_collection_items(${collectionId}, ${uuidArray}::uuid[]) AS inserted`;
+    const uuidArray =
+      questionIds.length > 0 ? `{${questionIds.join(",")}}` : "{}";
+    const [row] =
+      await db`SELECT add_faq_collection_items(${collectionId}, ${uuidArray}::uuid[]) AS inserted`;
     return Number(row?.inserted ?? 0);
   }
 
@@ -228,7 +275,10 @@ export class FaqCollectionsService extends BaseService<FaqCollectionPublic, Crea
     await db`SELECT remove_faq_collection_item(${collectionId}, ${questionId})`;
   }
 
-  async copy(sourceId: string, data: CopyFaqCollectionRequest): Promise<FaqCollectionPublic> {
+  async copy(
+    sourceId: string,
+    data: CopyFaqCollectionRequest
+  ): Promise<FaqCollectionPublic> {
     const [row] = await db`
       SELECT * FROM copy_faq_collection(
         ${sourceId},
@@ -243,7 +293,9 @@ export class FaqCollectionsService extends BaseService<FaqCollectionPublic, Crea
     await db`SELECT delete_faq_collection(${id})`;
   }
 
-  private buildCollectionDetail(rows: FaqCollectionDetailRow[]): FaqCollectionDetail {
+  private buildCollectionDetail(
+    rows: FaqCollectionDetailRow[]
+  ): FaqCollectionDetail {
     const first = rows[0]!;
     const topics = new Map<string, FaqCollectionTopicDetail>();
     const subTopics = new Map<string, FaqCollectionSubTopicDetail>();
@@ -314,19 +366,29 @@ export class FaqCollectionsService extends BaseService<FaqCollectionPublic, Crea
       admission_year: first.admission_year,
       status: first.collection_status,
       published_by: first.published_by ?? undefined,
-      published_at: first.published_at ? new Date(first.published_at) : undefined,
+      published_at: first.published_at
+        ? new Date(first.published_at)
+        : undefined,
       topics: Array.from(topics.values()),
     };
   }
 
-  private buildExportRows(detail: FaqCollectionDetail): FaqCollectionExportRow[] {
+  private buildExportRows(
+    detail: FaqCollectionDetail,
+    selectedTopicIds?: Set<string>
+  ): FaqCollectionExportRow[] {
     const rows: FaqCollectionExportRow[] = [];
     let seq = 1;
 
     for (const topic of detail.topics) {
+      if (selectedTopicIds && !selectedTopicIds.has(topic.id)) {
+        continue;
+      }
+
       for (const subTopic of topic.sub_topics) {
         for (const question of subTopic.questions) {
-          const answers = question.answers.length > 0 ? question.answers : [null];
+          const answers =
+            question.answers.length > 0 ? question.answers : [null];
 
           for (const answer of answers) {
             const campusNames = getExportCampusNames(answer);
@@ -337,7 +399,17 @@ export class FaqCollectionsService extends BaseService<FaqCollectionPublic, Crea
               const campusCode = campusCodes[i] ?? "ALL";
 
               rows.push({
-                record_id: buildRecordId(detail.admission_year, campusCode, topic.code, seq),
+                topic_id: topic.id,
+                topic_code: topic.code,
+                question_code: question.code,
+                answer_id: answer?.id ?? null,
+                campus_code: campusCode,
+                record_id: buildRecordId(
+                  detail.admission_year,
+                  campusCode,
+                  topic.code,
+                  seq
+                ),
                 main_topic: topic.name,
                 sub_topic: subTopic.name,
                 question: question.content,
@@ -359,7 +431,12 @@ export class FaqCollectionsService extends BaseService<FaqCollectionPublic, Crea
   }
 }
 
-function buildRecordId(year: number, campusCode: string, topicCode: string, seq: number): string {
+function buildRecordId(
+  year: number,
+  campusCode: string,
+  topicCode: string,
+  seq: number
+): string {
   return `FAQ${year}${compactCode(campusCode)}${compactCode(topicCode)}${String(seq).padStart(3, "0")}`;
 }
 
@@ -367,7 +444,9 @@ function compactCode(value: string): string {
   return value.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
 }
 
-function getExportCampusNames(answer: FaqCollectionAnswerDetail | null): string[] {
+function getExportCampusNames(
+  answer: FaqCollectionAnswerDetail | null
+): string[] {
   if (!answer) return [""];
   if (!answer.applies_to_all_campuses && answer.campus_names.length > 0) {
     return answer.campus_names;
@@ -375,7 +454,9 @@ function getExportCampusNames(answer: FaqCollectionAnswerDetail | null): string[
   return ["Tất cả cơ sở"];
 }
 
-function getExportCampusCodes(answer: FaqCollectionAnswerDetail | null): string[] {
+function getExportCampusCodes(
+  answer: FaqCollectionAnswerDetail | null
+): string[] {
   if (!answer) return ["ALL"];
   if (!answer.applies_to_all_campuses && answer.campus_codes.length > 0) {
     return answer.campus_codes;

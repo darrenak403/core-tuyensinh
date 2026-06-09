@@ -193,6 +193,11 @@ export interface FaqCollectionDetail extends FaqCollectionPublic {
 }
 
 export interface FaqCollectionExportRow {
+  topic_id: string;
+  topic_code: string;
+  question_code: string;
+  answer_id: string | null;
+  campus_code: string;
   record_id: string;
   main_topic: string;
   sub_topic: string;
@@ -347,6 +352,19 @@ export interface TransitionCollectionStatusRequest {
 
 export interface AddCollectionItemsRequest {
   question_ids: string[];
+}
+
+export interface ExportFaqCollectionTopicsMarkdownRequest {
+  topic_ids: string[];
+}
+
+export interface FaqCollectionTopicMarkdownFile {
+  topic_id: string;
+  topic_code: string;
+  topic_name: string;
+  filename: string;
+  content: string;
+  record_count: number;
 }
 
 export interface CopyFaqCollectionRequest {
